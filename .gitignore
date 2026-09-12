@@ -1,0 +1,27 @@
+# Virtual environment
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# PyInstaller build folders
+build/
+dist/
+*.spec
+
+# Android Buildozer
+.buildozer/
+bin/
+
+# Temporary AI debug scripts
+patch_main.py
+remove_bg.py
+rename_levels.py
+test_dummy*.py
+test_space.py
+crash.log
+
+# System files
+.DS_Store
