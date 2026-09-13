@@ -8,26 +8,42 @@ Players can choose their favorite animal hero—a hungry **Giraffe** or a speedy
 
 ## 🌟 Features
 
-- **Choose Your Hero:** Interactive character selection screen. Play as the Giraffe to eat acacia leaves, or play as the Cheetah to catch the gazelle!
-- **100 Engaging Levels:** From simple straight paths to complex maze-like puzzles. Level names dynamically adapt depending on the hero you play!
-- **Visual Command Queue:** Click buttons to compose code blocks and watch your hero execute the sequence step-by-step.
-- **Dynamic Savanna Environments:** Features multiple terrain textures (lush grass, dry savanna patches, mud tracks), rocky hazards, water obstacles (rivers & lakes), and transparent cartoon sprites.
-- **Fluid Progression:** Clear a level and press `SPACE` to immediately jump into the next challenge. Switch heroes anytime from the main menu!
+- **Choose Your Hero:** Interactive character selection screen. Play as the Giraffe to reach acacia leaves, or play as the Cheetah to catch the gazelle!
+- **100 Solvable Levels:** 100 thoughtfully designed levels ranging from gentle straight lines to complex maze puzzles. All 100 levels are mathematically verified to be 100% solvable!
+- **Real-Time Code Execution Highlighter:** Just like Scratch and Blockly, the command queue is rendered as visual code pills that glow golden in real time as the animal executes each step!
+- **Undo (⌫) & Emergency Stop (⏹):** Made a typo? Click **UNDO** or press `Backspace` to delete just the last command without wiping your whole queue. If you see a crash coming, click **STOP** to halt execution instantly.
+- **Progress Tracking & Stars (⭐):** Your completed levels are saved automatically! Completed levels earn a gold star in the level select menu, tracking your journey to 100/100 stars.
+- **Natural Biome Terrain:** Coherent savanna environment with lush grass, sun-baked dry savanna patches, natural clustered watering holes, and muddy riverbanks.
+- **Dynamic Resolution & Display Modes:** Built for both Fullscreen and Windowed mode (`F11`), with dynamic grid scaling ensuring the entire grid and all bottom tiles are 100% visible on all monitor sizes.
+- **Animated Walk Cycles:** Procedural running and walking simulations with dynamic leg shearing, wobbling, and vertical bobbing.
 
 ---
 
-## 🎮 How to Play
+## 🎮 How to Play & Controls
 
-1. **Pick your Hero:** Click the character card to select the Giraffe or the Cheetah.
-2. **Plan Your Route:** Look at the grid and find the path from your hero to their goal.
-3. **Add Commands:**
-   - **FORWARD:** Moves your hero 1 tile forward in the direction they are currently facing.
-   - **LEFT:** Rotates your hero 90° counter-clockwise.
-   - **RIGHT:** Rotates your hero 90° clockwise.
-4. **Run the Code:** Click **RUN!** to watch your hero execute your instructions.
-5. **Clear & Retry:** If you hit an obstacle or step out of bounds, click **CLEAR** or press `SPACE` to reset.
-6. **Next Level:** Once you reach your target, press `SPACE` to advance to the next level!
-7. **Return to Menu:** Press `ESC` at any time to return to the level selection menu.
+### Objective
+Plan a sequence of instructions to guide your animal to the goal tile without crashing into rocks, water hazards, or stepping out of bounds!
+
+### 🖱️ Mouse Controls
+- **FORWARD:** Moves your hero 1 tile forward in the direction they are facing.
+- **LEFT:** Rotates your hero 90° counter-clockwise.
+- **RIGHT:** Rotates your hero 90° clockwise.
+- **UNDO ⌫:** Removes the last added command from the queue.
+- **CLEAR 🗑:** Clears the entire queue and resets the hero to start.
+- **RUN ▶ / STOP ⏹:** Starts executing your code, or stops execution immediately.
+
+### ⌨️ Keyboard Shortcuts
+| Key | Action |
+| :--- | :--- |
+| **`W` or `↑ Up Arrow`** | Add `FORWARD` command |
+| **`A` or `← Left Arrow`** | Add `LEFT` command |
+| **`D` or `→ Right Arrow`** | Add `RIGHT` command |
+| **`Backspace`** | `UNDO` last command (⌫) |
+| **`C`** | `CLEAR` entire command queue |
+| **`Enter`** | `RUN` / `STOP` execution |
+| **`SPACE`** | Advance to Next Level (after winning) or Retry (after crashing) |
+| **`ESC`** | Return to Main Menu |
+| **`F11`** | Toggle Fullscreen / Windowed Mode |
 
 ---
 
@@ -41,7 +57,7 @@ Players can choose their favorite animal hero—a hungry **Giraffe** or a speedy
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/jeixix/GiraffeCode.git
+   git clone git@github.com:jeixix/GiraffeCode.git
    cd GiraffeCode
    ```
 
@@ -88,7 +104,7 @@ You can compile the game into a single, standalone executable that bundles Pytho
 
 2. Run PyInstaller (note the colon `:` used to separate paths on Linux):
    ```bash
-   pyinstaller -y --onefile --noconsole --add-data "assets/*:assets" --name GiraffeCode src/main.py
+   pyinstaller -y --onefile --noconsole --icon=assets/icon.png --add-data "assets/*:assets" --name GiraffeCode src/main.py
    ```
 
 3. Your standalone Linux binary will be ready in the `dist/` directory:
@@ -116,7 +132,7 @@ You can compile the game into a single, standalone executable that bundles Pytho
 
 5. Run PyInstaller (note the semicolon `;` used to separate paths on Windows):
    ```cmd
-   pyinstaller -y --onefile --noconsole --add-data "assets/*;assets" --name GiraffeCode src/main.py
+   pyinstaller -y --onefile --noconsole --icon=assets/icon.png --add-data "assets/*;assets" --name GiraffeCode src/main.py
    ```
 
 6. Your standalone Windows executable will be available at:
@@ -129,18 +145,21 @@ You can compile the game into a single, standalone executable that bundles Pytho
 
 ## 📂 Project Structure
 
+Following modern Python packaging standards, all execution logic resides cleanly within the `src/` module:
+
 ```text
 GiraffeCode/
-├── assets/             # Game graphics (PNG sprites & JPG backgrounds)
+├── assets/             # Game graphics (PNG sprites, walk cycle frames & JPG backgrounds)
 ├── src/
-│   ├── game.py         # Main game loop, menus, and application logic
-│   ├── executor.py     # Command execution engine & timing
-│   ├── game_state.py   # Grid state, movement logic, collision detection
-│   ├── giraffe.py      # Player entity, rotation & rendering
-│   ├── levels.py       # 100 level definitions with obstacles & goals
-│   └── ui.py           # Buttons, command queue, and UI rendering
-│   └── main.py         # Lightweight launcher script
-├── requirements.txt    # Python package dependencies
+│   ├── main.py         # Entry point and launcher script
+│   ├── game.py         # Main loop, menus, dynamic scaling & terrain generation
+│   ├── executor.py     # Command execution engine, step timing & state sync
+│   ├── game_state.py   # Grid state, directional movement & collision detection
+│   ├── giraffe.py      # Player entity, smooth sub-pixel interpolation & walk animations
+│   ├── levels.py       # 100 verified solvable level definitions
+│   ├── ui.py           # Buttons, visual code pills, highlighter & UI rendering
+│   └── scripts/        # Asset generation & walk cycle utility scripts
+├── requirements.txt    # Python dependencies (pygame-ce, Pillow)
 ├── .gitignore          # Git exclusion rules
 └── README.md           # Project documentation
 ```
