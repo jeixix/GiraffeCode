@@ -1,6 +1,7 @@
 import pygame
 import sys
 import os
+import json
 import random
 import math
 from src.levels import LEVELS
@@ -53,6 +54,33 @@ def get_resource_path(relative_path):
     except Exception:
         base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
+
+def get_save_file_path():
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_dir, "progress.json")
+    except Exception:
+        return "progress.json"
+
+def load_progress():
+    path = get_save_file_path()
+    try:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                data = json.load(f)
+                return set(data.get("completed_levels", []))
+    except Exception as e:
+        print(f"Failed to load progress: {e}")
+    return set()
+
+def save_progress(completed_levels):
+    path = get_save_file_path()
+    try:
+        with open(path, "w") as f:
+            json.dump({"completed_levels": sorted(list(completed_levels))}, f, indent=2)
+    except Exception as e:
+        print(f"Failed to save progress: {e}")
+
 def generate_terrain(level, level_idx):
     """
     Deterministically generates a realistic savanna terrain distribution:
@@ -277,7 +305,7 @@ def character_select_menu(screen, assets):
         btn2.draw(screen, mouse_pos)
         pygame.display.flip()
         clock.tick(60)
-def main_menu(screen, selected_char, assets):
+def main_menu(screen, selected_char, assets, completed_levels):
     global IS_FULLSCREEN
     
     char_info = CHARACTERS.get(selected_char, CHARACTERS["giraffe"])
@@ -294,7 +322,12 @@ def main_menu(screen, selected_char, assets):
     btn_color = char_info["btn_color"]
     btn_hover = char_info["btn_hover"]
     for i, level in enumerate(LEVELS):
-        btn = Button(screen.get_width() // 2 - 300, 0, 600, 60, level.name_giraffe if selected_char == "giraffe" else level.name_cheetah, btn_color, btn_hover, i)
+        lvl_name = level.name_giraffe if selected_char == "giraffe" else level.name_cheetah
+        is_done = i in completed_levels
+        display_text = f"⭐ {lvl_name}" if is_done else lvl_name
+        c_color = (255, 235, 140) if is_done else btn_color
+        c_hover = (255, 245, 175) if is_done else btn_hover
+        btn = Button(screen.get_width() // 2 - 300, 0, 600, 60, display_text, c_color, c_hover, i)
         buttons.append(btn)
     btn_fs = Button(screen.get_width() - 210, 70, 190, 42, "Windowed" if IS_FULLSCREEN else "Fullscreen", (100, 150, 255), (150, 200, 255), "TOGGLE_FS")
     btn_change_hero = Button(screen.get_width() - 210, 20, 190, 42, 
@@ -325,7 +358,6 @@ def main_menu(screen, selected_char, assets):
                 return hero_act
             fs_act = btn_fs.handle_event(event)
             if fs_act:
-                
                 IS_FULLSCREEN = not IS_FULLSCREEN
                 get_screen()
                 btn_fs.text = "Windowed" if IS_FULLSCREEN else "Fullscreen"
@@ -357,8 +389,8 @@ def main_menu(screen, selected_char, assets):
         # Title
         title = font_title.render("SavannaCode!", True, (0, 100, 0))
         screen.blit(title, (30, 20))
-        # Hero status badge
-        hero_tag = f"Playing as {char_info['emoji']} {char_info['name']}  |  Goal: {char_info['target_name']}"
+        # Hero status badge & progress stars
+        hero_tag = f"Playing as {char_info['emoji']} {char_info['name']}  |  Goal: {char_info['target_name']}  |  Completed: {len(completed_levels)}/{len(LEVELS)} ⭐"
         tag_surf = font_sub.render(hero_tag, True, char_info["theme_color"])
         screen.blit(tag_surf, (35, 92))
         # Switch Hero button
@@ -474,6 +506,7 @@ def main():
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, 40)
     small_font = pygame.font.Font(None, 34)
+    completed_levels = load_progress()
     # Level variables
     level = game_state = ui = executor = offset_x = offset_y = tile_size = level_assets = obstacle_types = ground_types = None
     while True:
@@ -482,7 +515,7 @@ def main():
             state = "MENU"
             continue
         elif state == "MENU":
-            menu_action = main_menu(screen, selected_character, assets)
+            menu_action = main_menu(screen, selected_character, assets, completed_levels)
             if menu_action == "SWITCH_HERO":
                 state = "CHAR_SELECT"
                 continue
@@ -500,16 +533,41 @@ def main():
                     sys.exit()
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                     IS_FULLSCREEN = not IS_FULLSCREEN; get_screen()
-                if not executor.is_running:
-                    action = ui.handle_event(event)
-                    if action in ["FORWARD", "LEFT", "RIGHT"]:
-                        ui.add_command(action)
-                    elif action == "RUN":
-                        executor.start()
-                    elif action == "CLEAR":
-                        ui.clear_commands()
-                        game_state.reset()
+                
+                # UI button actions (including STOP when running)
+                action = ui.handle_event(event)
+                if action in ["FORWARD", "LEFT", "RIGHT"]:
+                    ui.add_command(action)
+                elif action == "UNDO":
+                    ui.undo_command()
+                elif action == "RUN":
+                    executor.start()
+                elif action == "STOP":
+                    executor.stop()
+                elif action == "CLEAR":
+                    ui.clear_commands()
+                    game_state.reset()
+                
+                # Keyboard shortcuts for coding & controls
                 if event.type == pygame.KEYDOWN:
+                    if not executor.is_running:
+                        if event.key in (pygame.K_w, pygame.K_UP):
+                            ui.add_command("FORWARD")
+                        elif event.key in (pygame.K_a, pygame.K_LEFT):
+                            ui.add_command("LEFT")
+                        elif event.key in (pygame.K_d, pygame.K_RIGHT):
+                            ui.add_command("RIGHT")
+                        elif event.key == pygame.K_BACKSPACE:
+                            ui.undo_command()
+                        elif event.key == pygame.K_c:
+                            ui.clear_commands()
+                            game_state.reset()
+                        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                            executor.start()
+                    else:
+                        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                            executor.stop()
+
                     if event.key == pygame.K_SPACE and game_state.state == "SUCCESS":
                         if current_level_idx < len(LEVELS) - 1:
                             current_level_idx += 1
@@ -529,6 +587,12 @@ def main():
                 continue
             # Update
             executor.update()
+            
+            # Save progress when player successfully reaches the goal
+            if game_state.state == "SUCCESS" and current_level_idx not in completed_levels:
+                completed_levels.add(current_level_idx)
+                save_progress(completed_levels)
+                
             # Draw
             screen.fill((135, 206, 235))
             # Header info
@@ -542,15 +606,16 @@ def main():
             walk_key = char_info["character_sprite"] + "_walk"
             player_sprites = level_assets.get(walk_key) or level_assets.get(char_info["character_sprite"])
             game_state.giraffe.draw(screen, offset_x + gx * tile_size, offset_y + gy * tile_size, tile_size, player_sprites)
-            # Command buttons & code queue
-            ui.draw(screen)
+            # Command buttons & code queue with active execution highlight
+            active_cmd = executor.command_index if executor.is_running else None
+            ui.draw(screen, active_cmd_idx=active_cmd)
             # Success Overlay
             if game_state.state == "SUCCESS":
                 overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
                 overlay.fill((0, 255, 0, 50))
                 screen.blit(overlay, (0, 0))
                 prompt = "Next Level" if current_level_idx < len(LEVELS) - 1 else "Menu"
-                text = font.render(f"{char_info['win_text']} (Press SPACE for {prompt})", True, (255, 255, 255))
+                text = font.render(f"{char_info['win_text']} ⭐ (Press SPACE for {prompt})", True, (255, 255, 255))
                 text_rect = text.get_rect(center=(screen.get_width() // 2, (screen.get_height() - UI_HEIGHT) // 2))
                 bg_rect = text_rect.inflate(24, 20)
                 pygame.draw.rect(screen, (0, 140, 0), bg_rect, border_radius=10)

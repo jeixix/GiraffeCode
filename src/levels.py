@@ -197,7 +197,7 @@ LEVELS = [
         width=5, height=5,
         start_x=0, start_y=3, start_dir=1,
         goal_x=4, goal_y=4,
-        obstacles=[(2, 4), (1, 2), (1, 1), (2, 0), (2, 3)]
+        obstacles=[(2, 4), (1, 2), (2, 0), (2, 3)]
     ),
     Level(
         name="Level 28: Crocodile Creek",
@@ -246,7 +246,7 @@ LEVELS = [
         width=5, height=5,
         start_x=0, start_y=4, start_dir=1,
         goal_x=4, goal_y=2,
-        obstacles=[(2, 1), (3, 4), (3, 1), (2, 3), (1, 0), (3, 2)]
+        obstacles=[(3, 4), (3, 1), (2, 3), (1, 0), (3, 2)]
     ),
     Level(
         name="Level 35: Wildebeest Way",
@@ -260,7 +260,7 @@ LEVELS = [
         width=5, height=5,
         start_x=0, start_y=3, start_dir=1,
         goal_x=4, goal_y=0,
-        obstacles=[(1, 2), (3, 4), (1, 1), (3, 3), (2, 2), (1, 0)]
+        obstacles=[(1, 2), (1, 1), (3, 3), (2, 2), (1, 0)]
     ),
     Level(
         name="Level 37: Buffalo Roam",
@@ -302,7 +302,7 @@ LEVELS = [
         width=6, height=6,
         start_x=0, start_y=0, start_dir=1,
         goal_x=5, goal_y=4,
-        obstacles=[(4, 4), (1, 1), (2, 0), (1, 4), (3, 3), (2, 2), (2, 5), (3, 5)]
+        obstacles=[(4, 4), (1, 1), (2, 0), (1, 4), (3, 3), (2, 2), (2, 5)]
     ),
     Level(
         name="Level 43: Vulture View",
@@ -323,7 +323,7 @@ LEVELS = [
         width=6, height=6,
         start_x=0, start_y=2, start_dir=1,
         goal_x=5, goal_y=0,
-        obstacles=[(4, 4), (4, 0), (1, 2), (3, 1), (1, 1), (2, 3), (3, 3), (1, 0), (3, 5)]
+        obstacles=[(4, 4), (4, 0), (1, 2), (3, 1), (1, 1), (2, 3), (1, 0), (3, 5)]
     ),
     Level(
         name="Level 46: Dry Riverbed",
@@ -358,7 +358,7 @@ LEVELS = [
         width=6, height=6,
         start_x=0, start_y=5, start_dir=1,
         goal_x=5, goal_y=4,
-        obstacles=[(2, 4), (4, 0), (1, 5), (3, 1), (2, 0), (2, 3), (2, 2), (2, 5), (4, 1)]
+        obstacles=[(2, 4), (4, 0), (1, 5), (2, 0), (2, 3), (2, 2), (2, 5), (4, 1)]
     ),
     Level(
         name="Level 51: Palm Grove",
@@ -414,7 +414,7 @@ LEVELS = [
         width=6, height=6,
         start_x=0, start_y=3, start_dir=1,
         goal_x=5, goal_y=2,
-        obstacles=[(4, 4), (1, 2), (3, 1), (1, 4), (3, 0), (4, 5), (3, 3), (3, 2), (1, 3)]
+        obstacles=[(1, 2), (3, 1), (1, 4), (3, 0), (4, 5), (3, 3), (3, 2), (1, 3)]
     ),
     Level(
         name="Level 59: Sweet Leaves",
@@ -547,7 +547,7 @@ LEVELS = [
         width=7, height=7,
         start_x=0, start_y=3, start_dir=1,
         goal_x=6, goal_y=6,
-        obstacles=[(2, 4), (4, 0), (5, 1), (4, 2), (2, 3), (4, 5), (5, 6), (1, 0), (1, 6), (3, 2), (2, 5), (3, 5)]
+        obstacles=[(2, 4), (4, 0), (5, 1), (2, 3), (4, 5), (5, 6), (1, 0), (1, 6), (3, 2), (2, 5), (3, 5)]
     ),
     Level(
         name="Level 78: Watering Hole",
@@ -575,7 +575,7 @@ LEVELS = [
         width=8, height=8,
         start_x=0, start_y=5, start_dir=1,
         goal_x=7, goal_y=6,
-        obstacles=[(4, 4), (1, 2), (4, 0), (1, 5), (3, 1), (4, 3), (4, 6), (6, 7), (4, 5), (1, 7), (2, 6), (3, 6), (2, 2), (3, 2), (2, 5), (4, 7)]
+        obstacles=[(4, 4), (1, 2), (4, 0), (1, 5), (4, 3), (4, 6), (6, 7), (4, 5), (1, 7), (2, 6), (3, 6), (2, 2), (3, 2), (2, 5), (4, 7)]
     ),
     Level(
         name="Level 82: Hide and Seek",
@@ -687,7 +687,7 @@ LEVELS = [
         width=8, height=8,
         start_x=0, start_y=6, start_dir=1,
         goal_x=7, goal_y=1,
-        obstacles=[(4, 4), (6, 2), (2, 1), (2, 7), (1, 5), (6, 1), (1, 1), (5, 7), (3, 3), (5, 0), (5, 6), (2, 6), (2, 2), (1, 0), (4, 7), (3, 5)]
+        obstacles=[(4, 4), (6, 2), (2, 1), (2, 7), (1, 5), (6, 1), (1, 1), (5, 7), (3, 3), (5, 0), (5, 6), (2, 6), (1, 0), (4, 7), (3, 5)]
     ),
     Level(
         name="Level 98: Under the Tree",

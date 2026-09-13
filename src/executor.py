@@ -5,7 +5,7 @@ class Executor:
         self.game_state = game_state
         self.ui = ui
         self.is_running = False
-        self.command_index = 0
+        self.command_index = -1
         self.last_step_time = 0
         self.step_delay = 700 # milliseconds between steps
         
@@ -16,6 +16,14 @@ class Executor:
             self.last_step_time = pygame.time.get_ticks()
             self.game_state.reset() # Reset to start position before running
             self.game_state.state = "RUNNING"
+            self.ui.set_running(True)
+            
+    def stop(self):
+        self.is_running = False
+        self.command_index = -1
+        self.ui.set_running(False)
+        if self.game_state.state == "RUNNING":
+            self.game_state.state = "IDLE"
             
     def update(self):
         if self.is_running:
@@ -28,5 +36,7 @@ class Executor:
                     self.last_step_time = current_time
                 else:
                     self.is_running = False
+                    self.command_index = -1
+                    self.ui.set_running(False)
                     if self.game_state.state == "RUNNING": # Finished commands but didn't win or crash
                         self.game_state.state = "IDLE"

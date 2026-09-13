@@ -25,3 +25,6 @@ crash.log
 
 # System files
 .DS_Store
+
+# Local player progress
+progress.json
