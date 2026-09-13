@@ -1,6 +1,8 @@
 import pygame
 import sys
 import os
+import random
+import math
 from src.levels import LEVELS
 from src.game_state import GameState
 from src.ui import UI, Button
@@ -51,33 +53,120 @@ def get_resource_path(relative_path):
     except Exception:
         base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
-def draw_grid(surface, level, offset_x, offset_y, assets, target_sprite="tree"):
+def generate_terrain(level, level_idx):
+    """
+    Deterministically generates a realistic savanna terrain distribution:
+    - Water obstacles cluster into natural ponds / riverbeds.
+    - Mud / dirt clusters around water banks and forms subtle animal trails.
+    - Golden dry savanna grass forms natural sunlit patches.
+    - Lush green grass forms the dominant background.
+    """
+    seed = (level_idx + 1) * 7919 + level.width * 313 + level.height * 1009 + level.start_x * 47 + level.goal_y * 89
+    rng = random.Random(seed)
+
+    # 1. Obstacle types: cluster water together into natural ponds / creeks
+    obstacle_types = {}
+    if level.obstacles:
+        name_lower = level.name.lower()
+        has_water_theme = any(w in name_lower for w in ["river", "creek", "pool", "water", "splash", "crossing", "hippo", "crocodile"])
+        has_water = has_water_theme or (rng.random() < 0.55)
+
+        if has_water and len(level.obstacles) > 0:
+            water_anchor = rng.choice(level.obstacles)
+            water_radius = rng.uniform(1.2, 2.6)
+            for (ox, oy) in level.obstacles:
+                d = math.hypot(ox - water_anchor[0], oy - water_anchor[1])
+                if d <= water_radius:
+                    obstacle_types[(ox, oy)] = "water"
+                else:
+                    obstacle_types[(ox, oy)] = "rock"
+        else:
+            for o in level.obstacles:
+                obstacle_types[o] = "rock"
+
+    water_tiles = [pos for pos, t in obstacle_types.items() if t == "water"]
+
+    # 2. Ground biome features
+    dry_cx = rng.uniform(0, level.width)
+    dry_cy = rng.uniform(0, level.height)
+    dry_radius = rng.uniform(1.8, 3.4)
+
+    trail_cx = rng.uniform(0, level.width)
+    trail_cy = rng.uniform(0, level.height)
+
+    ground_types = {}
+    for y in range(level.height):
+        for x in range(level.width):
+            if (x, y) in obstacle_types:
+                continue
+
+            # Proximity to water (muddy banks)
+            if water_tiles:
+                min_water_dist = min(math.hypot(x - wx, y - wy) for (wx, wy) in water_tiles)
+            else:
+                min_water_dist = 999.0
+
+            # Muddy shorelines around water
+            if min_water_dist <= 1.05:
+                ground_types[(x, y)] = "dirt" if rng.random() < 0.85 else "grass"
+                continue
+            elif min_water_dist <= 1.6:
+                if rng.random() < 0.45:
+                    ground_types[(x, y)] = "dirt"
+                    continue
+
+            # Dry savanna patch with organic noise
+            dist_dry = math.hypot(x - dry_cx, y - dry_cy)
+            noise = (math.sin(x * 1.5 + seed) * math.cos(y * 1.5 + seed * 0.5)) * 0.6
+            effective_dry_dist = dist_dry + noise
+
+            if effective_dry_dist < dry_radius:
+                prob = 1.0 - (effective_dry_dist / dry_radius) * 0.5
+                ground_types[(x, y)] = "dry" if rng.random() < prob else "grass"
+            else:
+                # Small animal trail / dirt patch
+                dist_trail = math.hypot(x - trail_cx, y - trail_cy)
+                if dist_trail < 1.3 and rng.random() < 0.4:
+                    ground_types[(x, y)] = "dirt"
+                elif rng.random() < 0.06:
+                    ground_types[(x, y)] = "dry"
+                else:
+                    ground_types[(x, y)] = "grass"
+
+    return obstacle_types, ground_types
+
+def draw_grid(surface, level, offset_x, offset_y, tile_size, assets, obstacle_types, ground_types, target_sprite="tree"):
     # Draw background grid
     for y in range(level.height):
         for x in range(level.width):
-            rect = pygame.Rect(offset_x + x * TILE_SIZE, offset_y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            # Grass variations
-            grass_type = (x * 7 + y * 3) % 3
-            grass_img = assets.get("grass")
-            if grass_type == 1 and assets.get("grass_dry"):
-                grass_img = assets.get("grass_dry")
-            elif grass_type == 2 and assets.get("grass_dirt"):
-                grass_img = assets.get("grass_dirt")
+            rect = pygame.Rect(offset_x + x * tile_size, offset_y + y * tile_size, tile_size, tile_size)
+
+            # Ground texture
+            g_type = ground_types.get((x, y), "grass")
+            if g_type == "dry" and assets.get("grass_dry"):
+                grass_img = assets["grass_dry"]
+            elif g_type == "dirt" and assets.get("grass_dirt"):
+                grass_img = assets["grass_dirt"]
+            else:
+                grass_img = assets.get("grass")
+
             if grass_img:
                 surface.blit(grass_img, rect)
             else:
                 pygame.draw.rect(surface, (200, 255, 200), rect)
+
             # Obstacles
             if (x, y) in level.obstacles:
-                is_water = ((x * 13 + y * 17) % 3) == 0 # 1/3 chance for water
-                if is_water and assets.get("water"):
+                obs_type = obstacle_types.get((x, y), "rock")
+                if obs_type == "water" and assets.get("water"):
                     surface.blit(assets["water"], rect)
-                elif not is_water and assets.get("rock"):
+                elif assets.get("rock"):
                     rock_rect = assets["rock"].get_rect(center=rect.center)
                     surface.blit(assets["rock"], rock_rect)
                 else:
-                    color = (50, 100, 200) if is_water else (150, 150, 150)
+                    color = (50, 100, 200) if obs_type == "water" else (150, 150, 150)
                     pygame.draw.rect(surface, color, rect)
+
             # Goal
             elif x == level.goal_x and y == level.goal_y:
                 target_img = assets.get(target_sprite) or assets.get("tree")
@@ -85,7 +174,8 @@ def draw_grid(surface, level, offset_x, offset_y, assets, target_sprite="tree"):
                     target_rect = target_img.get_rect(center=rect.center)
                     surface.blit(target_img, target_rect)
                 else:
-                    pygame.draw.circle(surface, (50, 200, 50), rect.center, TILE_SIZE // 3)
+                    pygame.draw.circle(surface, (50, 200, 50), rect.center, tile_size // 3)
+
             pygame.draw.rect(surface, (150, 200, 150), rect, 2) # Grid lines
 def character_select_menu(screen, assets):
     """Start menu screen to choose between Giraffe and Cheetah"""
@@ -188,7 +278,6 @@ def character_select_menu(screen, assets):
         pygame.display.flip()
         clock.tick(60)
 def main_menu(screen, selected_char, assets):
-    global IS_FULLSCREEN
     global IS_FULLSCREEN
     
     char_info = CHARACTERS.get(selected_char, CHARACTERS["giraffe"])
@@ -306,30 +395,47 @@ def main():
         except Exception as e:
             print(f"Failed to load {filename}: {e}")
             return None
-    assets["giraffe"] = load_image("giraffe.png", (TILE_SIZE, TILE_SIZE))
+    assets["giraffe"] = load_image("giraffe.png")
     assets["giraffe_walk"] = [
-        load_image("giraffe_walk1.png", (TILE_SIZE, TILE_SIZE)) or assets["giraffe"],
-        load_image("giraffe_walk2.png", (TILE_SIZE, TILE_SIZE)) or assets["giraffe"]
+        load_image("giraffe_walk1.png") or assets["giraffe"],
+        load_image("giraffe_walk2.png") or assets["giraffe"]
     ]
-    assets["cheetah"] = load_image("cheetah.png", (TILE_SIZE, TILE_SIZE))
+    assets["cheetah"] = load_image("cheetah.png")
     assets["cheetah_walk"] = [
-        load_image("cheetah_walk1.png", (TILE_SIZE, TILE_SIZE)) or assets["cheetah"],
-        load_image("cheetah_walk2.png", (TILE_SIZE, TILE_SIZE)) or assets["cheetah"]
+        load_image("cheetah_walk1.png") or assets["cheetah"],
+        load_image("cheetah_walk2.png") or assets["cheetah"]
     ]
-    assets["tree"] = load_image("tree.png", (TILE_SIZE, TILE_SIZE))
-    assets["gazelle"] = load_image("gazelle.png", (TILE_SIZE, TILE_SIZE))
-    assets["rock"] = load_image("rock.png", (TILE_SIZE, TILE_SIZE))
-    assets["grass"] = load_image("grass.jpg", (TILE_SIZE, TILE_SIZE))
-    assets["grass_dry"] = load_image("grass_dry.jpg", (TILE_SIZE, TILE_SIZE))
-    assets["grass_dirt"] = load_image("grass_dirt.jpg", (TILE_SIZE, TILE_SIZE))
-    assets["water"] = load_image("water.jpg", (TILE_SIZE, TILE_SIZE))
+    assets["tree"] = load_image("tree.png")
+    assets["gazelle"] = load_image("gazelle.png")
+    assets["rock"] = load_image("rock.png")
+    assets["grass"] = load_image("grass.jpg")
+    assets["grass_dry"] = load_image("grass_dry.jpg")
+    assets["grass_dirt"] = load_image("grass_dirt.jpg")
+    assets["water"] = load_image("water.jpg")
     assets["menu_bg_raw"] = load_image("menu_bg.jpg")
+
+    assets_cache = {}
+    def get_scaled_assets(tile_size):
+        if tile_size not in assets_cache:
+            scaled = {}
+            for k, v in assets.items():
+                if k.endswith("_raw") or v is None:
+                    scaled[k] = v
+                elif isinstance(v, list):
+                    scaled[k] = [pygame.transform.scale(f, (tile_size, tile_size)) if f else None for f in v]
+                elif isinstance(v, pygame.Surface):
+                    scaled[k] = pygame.transform.scale(v, (tile_size, tile_size))
+                else:
+                    scaled[k] = v
+            assets_cache[tile_size] = scaled
+        return assets_cache[tile_size]
+
     state = "CHAR_SELECT"
     selected_character = "giraffe"
     current_level_idx = 0
+
     def load_level(idx):
         level = LEVELS[idx]
-        # Use fixed logical resolution
         screen_w = LOGICAL_WIDTH
         screen_h = LOGICAL_HEIGHT
         scr = screen  # Reuse existing screen
@@ -338,22 +444,44 @@ def main():
         game_state = GameState(level)
         ui = UI(screen_w, screen_h)
         executor = Executor(game_state, ui)
-        offset_x = (screen_w - (level.width * TILE_SIZE)) // 2
-        offset_y = max(MARGIN, (screen_h - UI_HEIGHT - (level.height * TILE_SIZE)) // 2)
-        return scr, level, game_state, ui, executor, offset_x, offset_y
+
+        # Dynamic layout: ensure bottom row and all borders are 100% visible above UI
+        header_height = 48
+        ui_top = LOGICAL_HEIGHT - UI_HEIGHT  # 618
+        pad_top = 16
+        pad_bottom = 16
+        pad_x = 24
+
+        board_top = header_height + pad_top  # 64
+        board_bottom = ui_top - pad_bottom   # 602
+        avail_h = board_bottom - board_top   # 538
+        avail_w = LOGICAL_WIDTH - 2 * pad_x  # 976
+
+        max_w_tile = avail_w // level.width
+        max_h_tile = avail_h // level.height
+        tile_size = min(80, max_w_tile, max_h_tile)
+
+        grid_w = level.width * tile_size
+        grid_h = level.height * tile_size
+
+        offset_x = (LOGICAL_WIDTH - grid_w) // 2
+        offset_y = board_top + (avail_h - grid_h) // 2
+
+        obstacle_types, ground_types = generate_terrain(level, idx)
+        level_assets = get_scaled_assets(tile_size)
+        return scr, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types
+
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, 40)
     small_font = pygame.font.Font(None, 34)
     # Level variables
-    level = game_state = ui = executor = offset_x = offset_y = None
+    level = game_state = ui = executor = offset_x = offset_y = tile_size = level_assets = obstacle_types = ground_types = None
     while True:
         if state == "CHAR_SELECT":
-            
             selected_character = character_select_menu(screen, assets)
             state = "MENU"
             continue
         elif state == "MENU":
-            
             menu_action = main_menu(screen, selected_character, assets)
             if menu_action == "SWITCH_HERO":
                 state = "CHAR_SELECT"
@@ -361,7 +489,7 @@ def main():
             else:
                 current_level_idx = menu_action
                 state = "PLAYING"
-                screen, level, game_state, ui, executor, offset_x, offset_y = load_level(current_level_idx)
+                screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types = load_level(current_level_idx)
                 continue
         elif state == "PLAYING":
             char_info = CHARACTERS[selected_character]
@@ -385,7 +513,7 @@ def main():
                     if event.key == pygame.K_SPACE and game_state.state == "SUCCESS":
                         if current_level_idx < len(LEVELS) - 1:
                             current_level_idx += 1
-                            screen, level, game_state, ui, executor, offset_x, offset_y = load_level(current_level_idx)
+                            screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types = load_level(current_level_idx)
                         else:
                             state = "MENU"
                         transitioned = True
@@ -408,12 +536,12 @@ def main():
             title_surf = small_font.render(title_str, True, (0, 0, 0))
             screen.blit(title_surf, (MARGIN, 10))
             # Grid with target sprite
-            draw_grid(screen, level, offset_x, offset_y, assets, target_sprite=char_info["target_sprite"])
+            draw_grid(screen, level, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, target_sprite=char_info["target_sprite"])
             # Player sprite
             gx, gy = game_state.giraffe.grid_x, game_state.giraffe.grid_y
             walk_key = char_info["character_sprite"] + "_walk"
-            player_sprites = assets.get(walk_key) or assets.get(char_info["character_sprite"])
-            game_state.giraffe.draw(screen, offset_x + gx * TILE_SIZE, offset_y + gy * TILE_SIZE, TILE_SIZE, player_sprites)
+            player_sprites = level_assets.get(walk_key) or level_assets.get(char_info["character_sprite"])
+            game_state.giraffe.draw(screen, offset_x + gx * tile_size, offset_y + gy * tile_size, tile_size, player_sprites)
             # Command buttons & code queue
             ui.draw(screen)
             # Success Overlay
