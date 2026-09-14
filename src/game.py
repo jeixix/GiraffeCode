@@ -273,12 +273,21 @@ def character_select_menu(screen, assets):
         c1_border = (40, 160, 40) if hover1 else (180, 210, 180)
         pygame.draw.rect(screen, c1_bg, card1_rect, border_radius=16)
         pygame.draw.rect(screen, c1_border, card1_rect, 4 if hover1 else 2, border_radius=16)
-        t1 = font_card_title.render("🦒 Giraffe", True, (0, 120, 0))
-        screen.blit(t1, (card1_rect.centerx - t1.get_width() // 2, card1_rect.y + 20))
+        t1 = font_card_title.render("Giraffe", True, (0, 120, 0))
+        emoji_g = assets.get("emoji_giraffe")
+        if emoji_g:
+            e1 = pygame.transform.scale(emoji_g, (32, 32))
+            tot_w = t1.get_width() + e1.get_width() + 8
+            sx = card1_rect.centerx - tot_w // 2
+            screen.blit(e1, (sx, card1_rect.y + 20))
+            screen.blit(t1, (sx + e1.get_width() + 8, card1_rect.y + 22))
+        else:
+            screen.blit(t1, (card1_rect.centerx - t1.get_width() // 2, card1_rect.y + 20))
         if preview_giraffe and preview_tree:
             screen.blit(preview_giraffe, (card1_rect.x + 35, card1_rect.y + 75))
-            arrow1 = font_card_title.render("➜", True, (0, 160, 0))
-            screen.blit(arrow1, (card1_rect.x + 145, card1_rect.y + 115))
+            arr_x = card1_rect.x + 155
+            arr_y = card1_rect.y + 130
+            pygame.draw.polygon(screen, (0, 160, 0), [(arr_x - 8, arr_y - 10), (arr_x + 8, arr_y), (arr_x - 8, arr_y + 10)])
             screen.blit(preview_tree, (card1_rect.x + 185, card1_rect.y + 85))
         desc1_a = font_card_desc.render("Goal: Reach the Acacia Tree", True, (40, 80, 40))
         desc1_b = font_card_desc.render("Get the tasty leaves!", True, (80, 80, 80))
@@ -291,12 +300,21 @@ def character_select_menu(screen, assets):
         c2_border = (230, 120, 0) if hover2 else (230, 200, 170)
         pygame.draw.rect(screen, c2_bg, card2_rect, border_radius=16)
         pygame.draw.rect(screen, c2_border, card2_rect, 4 if hover2 else 2, border_radius=16)
-        t2 = font_card_title.render("🐆 Cheetah", True, (200, 80, 0))
-        screen.blit(t2, (card2_rect.centerx - t2.get_width() // 2, card2_rect.y + 20))
+        t2 = font_card_title.render("Cheetah", True, (200, 80, 0))
+        emoji_c = assets.get("emoji_cheetah")
+        if emoji_c:
+            e2 = pygame.transform.scale(emoji_c, (32, 32))
+            tot_w = t2.get_width() + e2.get_width() + 8
+            sx = card2_rect.centerx - tot_w // 2
+            screen.blit(e2, (sx, card2_rect.y + 20))
+            screen.blit(t2, (sx + e2.get_width() + 8, card2_rect.y + 22))
+        else:
+            screen.blit(t2, (card2_rect.centerx - t2.get_width() // 2, card2_rect.y + 20))
         if preview_cheetah and preview_gazelle:
             screen.blit(preview_cheetah, (card2_rect.x + 35, card2_rect.y + 75))
-            arrow2 = font_card_title.render("➜", True, (220, 100, 0))
-            screen.blit(arrow2, (card2_rect.x + 145, card2_rect.y + 115))
+            arr_x = card2_rect.x + 155
+            arr_y = card2_rect.y + 130
+            pygame.draw.polygon(screen, (220, 100, 0), [(arr_x - 8, arr_y - 10), (arr_x + 8, arr_y), (arr_x - 8, arr_y + 10)])
             screen.blit(preview_gazelle, (card2_rect.x + 185, card2_rect.y + 85))
         desc2_a = font_card_desc.render("Goal: Catch the Speedy Gazelle", True, (120, 50, 0))
         desc2_b = font_card_desc.render("Fastest runner on the savanna!", True, (80, 80, 80))
@@ -321,17 +339,19 @@ def main_menu(screen, selected_char, assets, completed_levels):
     buttons = []
     btn_color = char_info["btn_color"]
     btn_hover = char_info["btn_hover"]
+    star_icon = pygame.transform.scale(assets["emoji_star"], (26, 26)) if assets.get("emoji_star") else None
     for i, level in enumerate(LEVELS):
         lvl_name = level.name_giraffe if selected_char == "giraffe" else level.name_cheetah
         is_done = i in completed_levels
-        display_text = f"⭐ {lvl_name}" if is_done else lvl_name
         c_color = (255, 235, 140) if is_done else btn_color
         c_hover = (255, 245, 175) if is_done else btn_hover
-        btn = Button(screen.get_width() // 2 - 300, 0, 600, 60, display_text, c_color, c_hover, i)
+        btn_icon = star_icon if is_done else None
+        btn = Button(screen.get_width() // 2 - 300, 0, 600, 60, lvl_name, c_color, c_hover, i, icon=btn_icon, icon_pos="left")
         buttons.append(btn)
     btn_fs = Button(screen.get_width() - 210, 70, 190, 42, "Windowed" if IS_FULLSCREEN else "Fullscreen", (100, 150, 255), (150, 200, 255), "TOGGLE_FS")
+    icon_switch = pygame.transform.scale(assets["emoji_switch"], (22, 22)) if assets.get("emoji_switch") else None
     btn_change_hero = Button(screen.get_width() - 210, 20, 190, 42, 
-                             f"Switch Hero 🔄", (255, 235, 59), (255, 249, 196), "SWITCH_HERO")
+                             "Switch Hero", (255, 235, 59), (255, 249, 196), "SWITCH_HERO", icon=icon_switch, icon_pos="right")
     clock = pygame.time.Clock()
     scroll_y = 0
     max_scroll = max(0, len(LEVELS) * 80 - screen.get_height() + 250)
@@ -389,10 +409,37 @@ def main_menu(screen, selected_char, assets, completed_levels):
         # Title
         title = font_title.render("SavannaCode!", True, (0, 100, 0))
         screen.blit(title, (30, 20))
-        # Hero status badge & progress stars
-        hero_tag = f"Playing as {char_info['emoji']} {char_info['name']}  |  Goal: {char_info['target_name']}  |  Completed: {len(completed_levels)}/{len(LEVELS)} ⭐"
-        tag_surf = font_sub.render(hero_tag, True, char_info["theme_color"])
-        screen.blit(tag_surf, (35, 92))
+        # Hero status badge & progress stars with real emoji images
+        badge_y = 96
+        cx = 35
+        s1 = font_sub.render("Playing as: ", True, (70, 70, 70))
+        screen.blit(s1, (cx, badge_y))
+        cx += s1.get_width() + 4
+        
+        hero_emoji_img = assets.get(f"emoji_{selected_char}")
+        if hero_emoji_img:
+            mini_hero = pygame.transform.scale(hero_emoji_img, (24, 24))
+            screen.blit(mini_hero, (cx, badge_y - 2))
+            cx += mini_hero.get_width() + 6
+            
+        s2 = font_sub.render(f"{char_info['name']}   |   Goal: ", True, char_info["theme_color"])
+        screen.blit(s2, (cx, badge_y))
+        cx += s2.get_width() + 4
+        
+        target_emoji_key = "emoji_leaf" if selected_char == "giraffe" else "emoji_gazelle"
+        target_emoji_img = assets.get(target_emoji_key)
+        if target_emoji_img:
+            mini_target = pygame.transform.scale(target_emoji_img, (24, 24))
+            screen.blit(mini_target, (cx, badge_y - 2))
+            cx += mini_target.get_width() + 6
+            
+        s3 = font_sub.render(f"{char_info['target_name']}   |   Completed: {len(completed_levels)}/{len(LEVELS)} ", True, (70, 70, 70))
+        screen.blit(s3, (cx, badge_y))
+        cx += s3.get_width() + 4
+        
+        if assets.get("emoji_star"):
+            mini_star = pygame.transform.scale(assets["emoji_star"], (22, 22))
+            screen.blit(mini_star, (cx, badge_y - 1))
         # Switch Hero button
         btn_change_hero.draw(screen, mouse_pos)
         btn_fs.draw(screen, mouse_pos)
@@ -445,13 +492,19 @@ def main():
     assets["grass_dirt"] = load_image("grass_dirt.jpg")
     assets["water"] = load_image("water.jpg")
     assets["menu_bg_raw"] = load_image("menu_bg.jpg")
+    assets["emoji_giraffe"] = load_image("emoji_giraffe.png")
+    assets["emoji_cheetah"] = load_image("emoji_cheetah.png")
+    assets["emoji_star"] = load_image("emoji_star.png")
+    assets["emoji_switch"] = load_image("emoji_switch.png")
+    assets["emoji_leaf"] = load_image("emoji_leaf.png")
+    assets["emoji_gazelle"] = load_image("emoji_gazelle.png")
 
     assets_cache = {}
     def get_scaled_assets(tile_size):
         if tile_size not in assets_cache:
             scaled = {}
             for k, v in assets.items():
-                if k.endswith("_raw") or v is None:
+                if k.startswith("emoji_") or k.endswith("_raw") or v is None:
                     scaled[k] = v
                 elif isinstance(v, list):
                     scaled[k] = [pygame.transform.scale(f, (tile_size, tile_size)) if f else None for f in v]
@@ -595,10 +648,19 @@ def main():
                 
             # Draw
             screen.fill((135, 206, 235))
-            # Header info
-            title_str = f"{(level.name_giraffe if selected_character == 'giraffe' else level.name_cheetah)}  [{char_info['emoji']} {char_info['name']}]  (ESC: Menu)"
-            title_surf = small_font.render(title_str, True, (0, 0, 0))
-            screen.blit(title_surf, (MARGIN, 10))
+            # Header info with real hero emoji image
+            lvl_name = level.name_giraffe if selected_character == 'giraffe' else level.name_cheetah
+            part1 = small_font.render(f"{lvl_name}   |   ", True, (0, 0, 0))
+            hx = MARGIN
+            screen.blit(part1, (hx, 10))
+            hx += part1.get_width()
+            hero_emoji_img = level_assets.get(f"emoji_{selected_character}")
+            if hero_emoji_img:
+                h_icon = pygame.transform.scale(hero_emoji_img, (26, 26))
+                screen.blit(h_icon, (hx, 8))
+                hx += h_icon.get_width() + 6
+            part2 = small_font.render(f"{char_info['name']}  (ESC: Menu)", True, (0, 0, 0))
+            screen.blit(part2, (hx, 10))
             # Grid with target sprite
             draw_grid(screen, level, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, target_sprite=char_info["target_sprite"])
             # Player sprite
@@ -615,11 +677,25 @@ def main():
                 overlay.fill((0, 255, 0, 50))
                 screen.blit(overlay, (0, 0))
                 prompt = "Next Level" if current_level_idx < len(LEVELS) - 1 else "Menu"
-                text = font.render(f"{char_info['win_text']} ⭐ (Press SPACE for {prompt})", True, (255, 255, 255))
-                text_rect = text.get_rect(center=(screen.get_width() // 2, (screen.get_height() - UI_HEIGHT) // 2))
-                bg_rect = text_rect.inflate(24, 20)
+                win_str1 = f"{char_info['win_text']}   "
+                win_str2 = f"   (Press SPACE for {prompt})"
+                surf1 = font.render(win_str1, True, (255, 255, 255))
+                surf2 = font.render(win_str2, True, (255, 255, 255))
+                star_img = level_assets.get("emoji_star")
+                if star_img:
+                    star_surf = pygame.transform.scale(star_img, (32, 32))
+                    tot_w = surf1.get_width() + star_surf.get_width() + surf2.get_width()
+                    tot_h = max(surf1.get_height(), star_surf.get_height())
+                    win_surf = pygame.Surface((tot_w, tot_h), pygame.SRCALPHA)
+                    win_surf.blit(surf1, (0, (tot_h - surf1.get_height()) // 2))
+                    win_surf.blit(star_surf, (surf1.get_width(), (tot_h - star_surf.get_height()) // 2))
+                    win_surf.blit(surf2, (surf1.get_width() + star_surf.get_width(), (tot_h - surf2.get_height()) // 2))
+                else:
+                    win_surf = font.render(f"{char_info['win_text']} (Press SPACE for {prompt})", True, (255, 255, 255))
+                text_rect = win_surf.get_rect(center=(screen.get_width() // 2, (screen.get_height() - UI_HEIGHT) // 2))
+                bg_rect = text_rect.inflate(28, 20)
                 pygame.draw.rect(screen, (0, 140, 0), bg_rect, border_radius=10)
-                screen.blit(text, text_rect)
+                screen.blit(win_surf, text_rect)
             # Crash Overlay
             elif game_state.state == "CRASH":
                 overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
