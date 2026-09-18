@@ -81,6 +81,10 @@ class UI:
             self.btn_clear,
             self.btn_run
         ]
+        self.hint_font = pygame.font.Font(None, 19)
+        self.font = pygame.font.Font(None, 20)
+        self.arrow_font = pygame.font.Font(None, 20)
+        self.empty_font = pygame.font.Font(None, 24)
         
     def set_running(self, running):
         self.is_running = running
@@ -121,7 +125,6 @@ class UI:
             btn.draw(surface, mouse_pos)
             
         # Draw keyboard hint on the right
-        hint_font = pygame.font.Font(None, 19)
         hint_lines = [
             "Keyboard shortcuts:",
             "Up / W : Forward     Backspace : Undo",
@@ -130,17 +133,14 @@ class UI:
         ]
         for idx, line in enumerate(hint_lines):
             color = (80, 80, 80) if idx == 0 else (120, 120, 120)
-            hint_surf = hint_font.render(line, True, color)
+            hint_surf = self.hint_font.render(line, True, color)
             surface.blit(hint_surf, (780, self.height - 68 + idx * 16))
             
         # Draw program queue pills
-        font = pygame.font.Font(None, 20)
-        arrow_font = pygame.font.Font(None, 20)
         short_names = {"FORWARD": "FWD", "LEFT": "LFT", "RIGHT": "RGT"}
         
         if not self.commands:
-            empty_font = pygame.font.Font(None, 24)
-            text_surf = empty_font.render("Your Code Queue: Click buttons below or use keyboard to build instructions!", True, (110, 110, 110))
+            text_surf = self.empty_font.render("Your Code Queue: Click buttons below or use keyboard to build instructions!", True, (110, 110, 110))
             surface.blit(text_surf, (20, self.height - 138))
         else:
             cur_x = 20
@@ -151,7 +151,7 @@ class UI:
             
             for i, cmd in enumerate(self.commands):
                 label = short_names.get(cmd, cmd)
-                text_w, text_h = font.size(label)
+                text_w, text_h = self.font.size(label)
                 pill_w = text_w + 12
                 arrow_w = 14
                 needed = pill_w + (arrow_w if i < len(self.commands) - 1 else 0)
@@ -167,7 +167,7 @@ class UI:
                 if is_active:
                     pygame.draw.rect(surface, (255, 255, 140), rect, border_radius=5)
                     pygame.draw.rect(surface, (230, 140, 0), rect, 3, border_radius=5)
-                    txt_surf = font.render(label, True, (0, 0, 0))
+                    txt_surf = self.font.render(label, True, (0, 0, 0))
                 else:
                     if cmd == "FORWARD":
                         bg_col = (220, 255, 220)
@@ -180,7 +180,7 @@ class UI:
                         bd_col = (220, 80, 80)
                     pygame.draw.rect(surface, bg_col, rect, border_radius=5)
                     pygame.draw.rect(surface, bd_col, rect, 1, border_radius=5)
-                    txt_surf = font.render(label, True, (20, 20, 20))
+                    txt_surf = self.font.render(label, True, (20, 20, 20))
                     
                 txt_rect = txt_surf.get_rect(center=rect.center)
                 surface.blit(txt_surf, txt_rect)
