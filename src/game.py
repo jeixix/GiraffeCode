@@ -207,6 +207,7 @@ def draw_grid(surface, level, offset_x, offset_y, tile_size, assets, obstacle_ty
             pygame.draw.rect(surface, (150, 200, 150), rect, 2) # Grid lines
 def character_select_menu(screen, assets):
     """Start menu screen to choose between Giraffe and Cheetah"""
+    global IS_FULLSCREEN
     clock = pygame.time.Clock()
     font_title = pygame.font.Font(None, 62)
     font_sub = pygame.font.Font(None, 32)
@@ -230,6 +231,8 @@ def character_select_menu(screen, assets):
     preview_tree = pygame.transform.scale(assets["tree"], (90, 90)) if assets.get("tree") else None
     preview_cheetah = pygame.transform.scale(assets["cheetah"], (110, 110)) if assets.get("cheetah") else None
     preview_gazelle = pygame.transform.scale(assets["gazelle"], (90, 90)) if assets.get("gazelle") else None
+    menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+    menu_overlay.fill((255, 255, 255, 140))
     while True:
         mouse_pos = pygame.mouse.get_pos()
         for event in pygame.event.get():
@@ -237,7 +240,10 @@ def character_select_menu(screen, assets):
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                IS_FULLSCREEN = not IS_FULLSCREEN; get_screen()
+                IS_FULLSCREEN = not IS_FULLSCREEN
+                screen = get_screen()
+                menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+                menu_overlay.fill((255, 255, 255, 140))
             action1 = btn1.handle_event(event)
             if action1:
                 return action1
@@ -253,9 +259,7 @@ def character_select_menu(screen, assets):
         # Background
         if bg_image:
             screen.blit(bg_image, (0, 0))
-            overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-            overlay.fill((255, 255, 255, 140))
-            screen.blit(overlay, (0, 0))
+            screen.blit(menu_overlay, (0, 0))
         else:
             screen.fill((135, 206, 235))
         # Header
@@ -355,6 +359,8 @@ def main_menu(screen, selected_char, assets, completed_levels):
     clock = pygame.time.Clock()
     scroll_y = 0
     max_scroll = max(0, len(LEVELS) * 80 - screen.get_height() + 250)
+    menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+    menu_overlay.fill((255, 255, 255, 140))
     while True:
         mouse_pos = pygame.mouse.get_pos()
         for event in pygame.event.get():
@@ -362,7 +368,10 @@ def main_menu(screen, selected_char, assets, completed_levels):
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                IS_FULLSCREEN = not IS_FULLSCREEN; get_screen()
+                IS_FULLSCREEN = not IS_FULLSCREEN
+                screen = get_screen()
+                menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+                menu_overlay.fill((255, 255, 255, 140))
             if event.type == pygame.MOUSEWHEEL:
                 scroll_y += event.y * 45
                 scroll_y = max(-max_scroll, min(0, scroll_y))
@@ -379,7 +388,9 @@ def main_menu(screen, selected_char, assets, completed_levels):
             fs_act = btn_fs.handle_event(event)
             if fs_act:
                 IS_FULLSCREEN = not IS_FULLSCREEN
-                get_screen()
+                screen = get_screen()
+                menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+                menu_overlay.fill((255, 255, 255, 140))
                 btn_fs.text = "Windowed" if IS_FULLSCREEN else "Fullscreen"
                 
             for btn in buttons:
@@ -392,9 +403,7 @@ def main_menu(screen, selected_char, assets, completed_levels):
             btn.rect.y = start_y + i * 80
         if bg_image:
             screen.blit(bg_image, (0, 0))
-            overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-            overlay.fill((255, 255, 255, 140))
-            screen.blit(overlay, (0, 0))
+            screen.blit(menu_overlay, (0, 0))
         else:
             screen.fill((135, 206, 235))
         # Draw buttons
@@ -544,7 +553,7 @@ def main():
 
         max_w_tile = avail_w // level.width
         max_h_tile = avail_h // level.height
-        tile_size = min(80, max_w_tile, max_h_tile)
+        tile_size = max(1, min(80, max_w_tile, max_h_tile))
 
         grid_w = level.width * tile_size
         grid_h = level.height * tile_size
@@ -563,6 +572,7 @@ def main():
     # Level variables
     level = game_state = ui = executor = offset_x = offset_y = tile_size = level_assets = obstacle_types = ground_types = None
     while True:
+        screen = pygame.display.get_surface()
         if state == "CHAR_SELECT":
             selected_character = character_select_menu(screen, assets)
             state = "MENU"
@@ -585,7 +595,7 @@ def main():
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                    IS_FULLSCREEN = not IS_FULLSCREEN; get_screen()
+                    IS_FULLSCREEN = not IS_FULLSCREEN; screen = get_screen()
                 
                 # UI button actions (including STOP when running)
                 action = ui.handle_event(event)
@@ -667,7 +677,8 @@ def main():
             gx, gy = game_state.giraffe.grid_x, game_state.giraffe.grid_y
             walk_key = char_info["character_sprite"] + "_walk"
             player_sprites = level_assets.get(walk_key) or level_assets.get(char_info["character_sprite"])
-            game_state.giraffe.draw(screen, offset_x + gx * tile_size, offset_y + gy * tile_size, tile_size, player_sprites)
+            if player_sprites:
+                game_state.giraffe.draw(screen, offset_x + gx * tile_size, offset_y + gy * tile_size, tile_size, player_sprites)
             # Command buttons & code queue with active execution highlight
             active_cmd = executor.command_index if executor.is_running else None
             ui.draw(screen, active_cmd_idx=active_cmd)
@@ -713,8 +724,12 @@ def main_wrapper():
         main()
     except Exception as e:
         import traceback
-        with open("crash.log", "w") as f:
-            traceback.print_exc(file=f)
+        try:
+            crash_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "crash.log")
+            with open(crash_path, "w") as f:
+                traceback.print_exc(file=f)
+        except Exception:
+            traceback.print_exc()
         raise
 if __name__ == "__main__":
     main_wrapper()

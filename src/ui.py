@@ -4,7 +4,7 @@ import pygame
 
 def load_icon(name, size):
     try:
-        base = getattr(sys, "_MEIPASS", os.path.abspath("."))
+        base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         path = os.path.join(base, "assets", name)
         if os.path.exists(path):
             img = pygame.image.load(path).convert_alpha()
