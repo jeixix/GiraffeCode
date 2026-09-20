@@ -599,7 +599,7 @@ def main():
                 
                 # UI button actions (including STOP when running)
                 action = ui.handle_event(event)
-                if action in ["FORWARD", "LEFT", "RIGHT"]:
+                if action in ["FORWARD", "LEFT", "RIGHT", "REPEAT"]:
                     ui.add_command(action)
                 elif action == "UNDO":
                     ui.undo_command()
@@ -620,6 +620,8 @@ def main():
                             ui.add_command("LEFT")
                         elif event.key in (pygame.K_d, pygame.K_RIGHT):
                             ui.add_command("RIGHT")
+                        elif event.key == pygame.K_r:
+                            ui.add_command("REPEAT")
                         elif event.key == pygame.K_BACKSPACE:
                             ui.undo_command()
                         elif event.key == pygame.K_c:
@@ -681,7 +683,7 @@ def main():
                 game_state.giraffe.draw(screen, offset_x + gx * tile_size, offset_y + gy * tile_size, tile_size, player_sprites)
             # Command buttons & code queue with active execution highlight
             active_cmd = executor.command_index if executor.is_running else None
-            ui.draw(screen, active_cmd_idx=active_cmd)
+            ui.draw(screen, active_cmd_idx=active_cmd, tutorial_level=current_level_idx)
             # Success Overlay
             if game_state.state == "SUCCESS":
                 overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)

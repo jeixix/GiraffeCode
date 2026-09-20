@@ -17,6 +17,7 @@ class Executor:
             self.game_state.reset() # Reset to start position before running
             self.game_state.state = "RUNNING"
             self.ui.set_running(True)
+            self.loop_counters = {}
             
     def stop(self):
         self.is_running = False
@@ -31,8 +32,22 @@ class Executor:
             if current_time - self.last_step_time > self.step_delay:
                 if self.command_index < len(self.ui.commands) and self.game_state.state == "RUNNING":
                     cmd = self.ui.commands[self.command_index]
-                    self.game_state.update_giraffe(cmd)
-                    self.command_index += 1
+                    
+                    if cmd == "REPEAT":
+                        # A REPEAT block jumps back to the beginning of the program.
+                        # We allow each REPEAT block to jump back up to 2 times (3 total executions)
+                        count = self.loop_counters.get(self.command_index, 0)
+                        if count < 2:
+                            self.loop_counters[self.command_index] = count + 1
+                            self.command_index = 0
+                        else:
+                            # Reset counter so it works correctly if repeated by a later outer loop
+                            self.loop_counters[self.command_index] = 0
+                            self.command_index += 1
+                    else:
+                        self.game_state.update_giraffe(cmd)
+                        self.command_index += 1
+                        
                     self.last_step_time = current_time
                 else:
                     self.is_running = False

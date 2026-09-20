@@ -65,18 +65,21 @@ class UI:
         self.icon_clear = load_icon("emoji_trash.png", (22, 22))
         self.icon_run = load_icon("emoji_play.png", (20, 20))
         self.icon_stop = load_icon("emoji_stop.png", (20, 20))
+        self.icon_repeat = load_icon("emoji_repeat.png", (22, 22))
         
-        self.btn_fwd = Button(20, btn_y, 130, btn_h, "FORWARD", (100, 255, 100), (150, 255, 150), "FORWARD")
-        self.btn_lft = Button(160, btn_y, 110, btn_h, "LEFT", (100, 100, 255), (150, 150, 255), "LEFT")
-        self.btn_rgt = Button(280, btn_y, 110, btn_h, "RIGHT", (255, 100, 100), (255, 150, 150), "RIGHT")
-        self.btn_undo = Button(400, btn_y, 110, btn_h, "UNDO", (255, 175, 75), (255, 200, 115), "UNDO", icon=self.icon_undo)
-        self.btn_clear = Button(520, btn_y, 110, btn_h, "CLEAR", (210, 210, 210), (230, 230, 230), "CLEAR", icon=self.icon_clear)
-        self.btn_run = Button(640, btn_y, 125, btn_h, "RUN", (255, 200, 0), (255, 230, 100), "RUN", icon=self.icon_run)
+        self.btn_fwd = Button(20, btn_y, 110, btn_h, "FORWARD", (100, 255, 100), (150, 255, 150), "FORWARD")
+        self.btn_lft = Button(140, btn_y, 90, btn_h, "LEFT", (100, 100, 255), (150, 150, 255), "LEFT")
+        self.btn_rgt = Button(240, btn_y, 90, btn_h, "RIGHT", (255, 100, 100), (255, 150, 150), "RIGHT")
+        self.btn_rep = Button(340, btn_y, 110, btn_h, "REPEAT", (220, 150, 255), (235, 180, 255), "REPEAT", icon=self.icon_repeat)
+        self.btn_undo = Button(460, btn_y, 100, btn_h, "UNDO", (255, 175, 75), (255, 200, 115), "UNDO", icon=self.icon_undo)
+        self.btn_clear = Button(570, btn_y, 100, btn_h, "CLEAR", (210, 210, 210), (230, 230, 230), "CLEAR", icon=self.icon_clear)
+        self.btn_run = Button(680, btn_y, 110, btn_h, "RUN", (255, 200, 0), (255, 230, 100), "RUN", icon=self.icon_run)
         
         self.buttons = [
             self.btn_fwd,
             self.btn_lft,
             self.btn_rgt,
+            self.btn_rep,
             self.btn_undo,
             self.btn_clear,
             self.btn_run
@@ -85,6 +88,7 @@ class UI:
         self.font = pygame.font.Font(None, 20)
         self.arrow_font = pygame.font.Font(None, 20)
         self.empty_font = pygame.font.Font(None, 24)
+        self.tut_font = pygame.font.Font(None, 28)
         
     def set_running(self, running):
         self.is_running = running
@@ -113,7 +117,7 @@ class UI:
         if not self.is_running:
             self.commands = []
 
-    def draw(self, surface, active_cmd_idx=None):
+    def draw(self, surface, active_cmd_idx=None, tutorial_level=None):
         mouse_pos = pygame.mouse.get_pos()
         
         # Draw UI area background
@@ -127,17 +131,18 @@ class UI:
         # Draw keyboard hint on the right
         hint_lines = [
             "Keyboard shortcuts:",
-            "Up / W : Forward     Backspace : Undo",
-            "Left / A : Turn Left   Enter : Run / Stop",
-            "Right / D : Turn Right  C : Clear all"
+            "Up/W : Forward     Backspace : Undo",
+            "Left/A : Left      Enter : Run/Stop",
+            "Right/D : Right    C : Clear all",
+            "R : Repeat         F11 : Fullscreen"
         ]
         for idx, line in enumerate(hint_lines):
             color = (80, 80, 80) if idx == 0 else (120, 120, 120)
             hint_surf = self.hint_font.render(line, True, color)
-            surface.blit(hint_surf, (780, self.height - 68 + idx * 16))
+            surface.blit(hint_surf, (800, self.height - 85 + idx * 16))
             
         # Draw program queue pills
-        short_names = {"FORWARD": "FWD", "LEFT": "LFT", "RIGHT": "RGT"}
+        short_names = {"FORWARD": "FWD", "LEFT": "LFT", "RIGHT": "RGT", "REPEAT": "REP"}
         
         if not self.commands:
             text_surf = self.empty_font.render("Your Code Queue: Click buttons below or use keyboard to build instructions!", True, (110, 110, 110))
@@ -194,6 +199,8 @@ class UI:
                     pts = [(arr_x - 3, arr_y - 4), (arr_x + 3, arr_y), (arr_x - 3, arr_y + 4)]
                     pygame.draw.polygon(surface, (140, 140, 140), pts)
                     cur_x += arrow_w
+                    
+        self.draw_tutorial_hints(surface, tutorial_level)
         
     def handle_event(self, event):
         if self.is_running:
@@ -208,3 +215,48 @@ class UI:
             if action:
                 return action
         return None
+
+    def draw_tutorial_hints(self, surface, tutorial_level):
+        if self.is_running or tutorial_level is None:
+            return
+            
+        import math
+        import time
+        bounce = math.sin(time.time() * 6) * 5
+        tut_color = (255, 60, 60)
+        
+        def draw_hint(text_str, target_rect):
+            text = self.tut_font.render(text_str, True, tut_color)
+            # Add a white outline for readability
+            outline = self.tut_font.render(text_str, True, (255, 255, 255))
+            rect = text.get_rect(midbottom=(target_rect.centerx, target_rect.top - 15 + bounce))
+            
+            for dx, dy in [(-1,-1), (1,-1), (-1,1), (1,1), (0,-2), (0,2), (-2,0), (2,0)]:
+                surface.blit(outline, (rect.x + dx, rect.y + dy))
+            surface.blit(text, rect)
+            
+            pygame.draw.polygon(surface, tut_color, [
+                (rect.centerx - 8, rect.bottom + 4),
+                (rect.centerx + 8, rect.bottom + 4),
+                (rect.centerx, rect.bottom + 12)
+            ])
+            pygame.draw.polygon(surface, (255, 255, 255), [
+                (rect.centerx - 10, rect.bottom + 2),
+                (rect.centerx + 10, rect.bottom + 2),
+                (rect.centerx, rect.bottom + 14)
+            ], 2)
+            
+        if tutorial_level == 0:
+            if len(self.commands) == 0:
+                draw_hint("Click FORWARD to move!", self.btn_fwd.rect)
+            else:
+                draw_hint("Click RUN to execute!", self.btn_run.rect)
+        elif tutorial_level == 1:
+            if len(self.commands) == 0:
+                # Point roughly between LEFT and RIGHT
+                fake_rect = self.btn_lft.rect.copy()
+                fake_rect.width += self.btn_rgt.rect.width + 10
+                draw_hint("Use LEFT or RIGHT to turn!", fake_rect)
+        elif tutorial_level == 2:
+            if len(self.commands) > 0 and "REPEAT" not in self.commands:
+                draw_hint("Try REPEAT to do it again!", self.btn_rep.rect)
