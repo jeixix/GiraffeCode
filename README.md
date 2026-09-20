@@ -10,10 +10,10 @@ Players can choose their favorite animal hero—a hungry **Giraffe** or a speedy
 
 - **Choose Your Hero:** Interactive character selection screen. Play as the Giraffe to reach acacia leaves, or play as the Cheetah to catch the gazelle!
 - **High-Quality Emoji Graphics:** The game uses bundled high-resolution Twemoji graphics for characters, targets, and UI icons, guaranteeing consistent, vibrant visuals across all operating systems without relying on missing system fonts.
-- **100 Solvable Levels:** 100 thoughtfully designed levels ranging from gentle straight lines to complex maze puzzles. All 100 levels are mathematically verified to be 100% solvable!
+- **200 Solvable Levels:** 200 thoughtfully designed and procedurally generated levels ranging from gentle straight lines to complex maze puzzles. All 200 levels are mathematically verified to be 100% solvable!
 - **Real-Time Code Execution Highlighter:** Just like Scratch and Blockly, the command queue is rendered as visual code pills that glow golden in real time as the animal executes each step!
 - **Undo (⌫) & Emergency Stop (⏹):** Made a typo? Click **UNDO** or press `Backspace` to delete just the last command without wiping your whole queue. If you see a crash coming, click **STOP** to halt execution instantly.
-- **Progress Tracking & Stars (⭐):** Your completed levels are saved automatically! Completed levels earn a gold star in the level select menu, tracking your journey to 100/100 stars.
+- **Progress Tracking & Stars (⭐):** Your completed levels are saved automatically! Completed levels earn a gold star in the level select menu, tracking your journey to 200/200 stars.
 - **Natural Biome Terrain:** Coherent savanna environment with lush grass, sun-baked dry savanna patches, natural clustered watering holes, and muddy riverbanks.
 - **Dynamic Resolution & Display Modes:** Built for both Fullscreen and Windowed mode (`F11`), with dynamic grid scaling ensuring the entire grid and all bottom tiles are 100% visible on all monitor sizes. Fully crash-proof display toggling!
 - **Animated Walk Cycles:** Procedural running and walking simulations with dynamic leg shearing, wobbling, and vertical bobbing.
@@ -157,7 +157,7 @@ GiraffeCode/
 │   ├── executor.py     # Command execution engine, step timing & state sync
 │   ├── game_state.py   # Grid state, directional movement & collision detection
 │   ├── giraffe.py      # Player entity, smooth sub-pixel interpolation & walk animations
-│   ├── levels.py       # 100 verified solvable level definitions
+│   ├── levels.py       # 200 verified solvable level definitions
 │   ├── ui.py           # Buttons, visual code pills, highlighter & UI rendering
 │   └── scripts/        # Asset generation & walk cycle utility scripts
 ├── requirements.txt    # Python dependencies (pygame-ce, Pillow)

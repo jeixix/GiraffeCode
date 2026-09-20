@@ -102,7 +102,7 @@ class UI:
             self.btn_run.action = "RUN"
             
     def add_command(self, cmd):
-        if not self.is_running and len(self.commands) < 40:
+        if not self.is_running and len(self.commands) < 100:
             self.commands.append(cmd)
             
     def undo_command(self):
