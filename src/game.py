@@ -365,14 +365,29 @@ def main_menu(screen, selected_char, assets, completed_levels):
         btn_icon = star_icon if is_done else None
         btn = Button(screen.get_width() // 2 - 300, 0, 600, 60, lvl_name, c_color, c_hover, i, icon=btn_icon, icon_pos="left")
         buttons.append(btn)
-    btn_fs = Button(screen.get_width() - 210, 70, 190, 42, "Windowed" if IS_FULLSCREEN else "Fullscreen", (100, 150, 255), (150, 200, 255), "TOGGLE_FS")
-    icon_switch = pygame.transform.scale(assets["emoji_switch"], (22, 22)) if assets.get("emoji_switch") else None
-    btn_change_hero = Button(screen.get_width() - 210, 20, 190, 42, 
-                             "Switch Hero", (255, 235, 59), (255, 249, 196), "SWITCH_HERO", icon=icon_switch, icon_pos="right")
-    btn_editor = Button(screen.get_width() - 415, 20, 190, 42,
-                        "Level Editor 🛠️", (255, 180, 50), (255, 210, 100), "LEVEL_EDITOR")
-    btn_custom = Button(screen.get_width() - 415, 70, 190, 42,
-                        "Play Custom 🎮", (130, 220, 130), (170, 245, 170), "LEVEL_EDITOR")
+    fs_w = 120
+    hero_w = 145
+    cust_w = 140
+    ed_w = 140
+    gap = 10
+    top_y = 16
+    btn_h = 36
+
+    icon_switch = pygame.transform.scale(assets["emoji_switch"], (18, 18)) if assets.get("emoji_switch") else None
+
+    btn_fs = Button(0, top_y, fs_w, btn_h, "Windowed" if IS_FULLSCREEN else "Fullscreen", (110, 160, 255), (160, 205, 255), "TOGGLE_FS", font_size=26)
+    btn_change_hero = Button(0, top_y, hero_w, btn_h, "Switch Hero", (255, 235, 60), (255, 248, 170), "SWITCH_HERO", icon=icon_switch, icon_pos="right", font_size=26)
+    btn_custom = Button(0, top_y, cust_w, btn_h, "Play Custom 🎮", (120, 220, 130), (160, 245, 170), "PLAY_CUSTOM_MENU", font_size=26)
+    btn_editor = Button(0, top_y, ed_w, btn_h, "Level Editor 🛠️", (255, 185, 60), (255, 215, 110), "LEVEL_EDITOR", font_size=26)
+
+    def reposition_header_buttons(scr_w):
+        btn_fs.rect.x = scr_w - 20 - fs_w
+        btn_change_hero.rect.x = btn_fs.rect.left - gap - hero_w
+        btn_custom.rect.x = btn_change_hero.rect.left - gap - cust_w
+        btn_editor.rect.x = btn_custom.rect.left - gap - ed_w
+
+    reposition_header_buttons(screen.get_width())
+
     clock = pygame.time.Clock()
     scroll_y = 0
     max_scroll = max(0, len(LEVELS) * 80 - screen.get_height() + 250)
@@ -391,10 +406,7 @@ def main_menu(screen, selected_char, assets, completed_levels):
                 menu_overlay.fill((255, 255, 255, 140))
                 if assets.get("menu_bg_raw"):
                     bg_image = pygame.transform.scale(assets["menu_bg_raw"], screen.get_size())
-                btn_fs.rect.x = screen.get_width() - 210
-                btn_change_hero.rect.x = screen.get_width() - 210
-                btn_editor.rect.x = screen.get_width() - 415
-                btn_custom.rect.x = screen.get_width() - 415
+                reposition_header_buttons(screen.get_width())
             if event.type == pygame.MOUSEWHEEL:
                 scroll_y += event.y * 45
                 scroll_y = max(-max_scroll, min(0, scroll_y))
@@ -416,7 +428,12 @@ def main_menu(screen, selected_char, assets, completed_levels):
             cust_act = btn_custom.handle_event(event)
             if cust_act:
                 sound_manager.play_click()
-                return cust_act
+                saved_levels = load_custom_levels()
+                if saved_levels:
+                    custom_lvl = custom_dict_to_level(saved_levels[0])
+                    return ("PLAY_CUSTOM", custom_lvl)
+                else:
+                    return "LEVEL_EDITOR"
             fs_act = btn_fs.handle_event(event)
             if fs_act:
                 IS_FULLSCREEN = not IS_FULLSCREEN
@@ -426,10 +443,7 @@ def main_menu(screen, selected_char, assets, completed_levels):
                 if assets.get("menu_bg_raw"):
                     bg_image = pygame.transform.scale(assets["menu_bg_raw"], screen.get_size())
                 btn_fs.text = "Windowed" if IS_FULLSCREEN else "Fullscreen"
-                btn_fs.rect.x = screen.get_width() - 210
-                btn_change_hero.rect.x = screen.get_width() - 210
-                btn_editor.rect.x = screen.get_width() - 415
-                btn_custom.rect.x = screen.get_width() - 415
+                reposition_header_buttons(screen.get_width())
                 
             for btn in buttons:
                 action = btn.handle_event(event)
@@ -439,6 +453,7 @@ def main_menu(screen, selected_char, assets, completed_levels):
         # Update button positions based on scroll
         start_y = 170 + scroll_y
         for i, btn in enumerate(buttons):
+            btn.rect.x = screen.get_width() // 2 - 300
             btn.rect.y = start_y + i * 80
         if bg_image:
             screen.blit(bg_image, (0, 0))
@@ -458,7 +473,7 @@ def main_menu(screen, selected_char, assets, completed_levels):
         title = font_title.render("SavannaCode!", True, (0, 100, 0))
         screen.blit(title, (30, 20))
         # Hero status badge & progress stars with real emoji images
-        badge_y = 96
+        badge_y = 92
         cx = 35
         s1 = font_sub.render("Playing as: ", True, (70, 70, 70))
         screen.blit(s1, (cx, badge_y))
@@ -654,6 +669,11 @@ def main():
                 continue
             elif menu_action == "LEVEL_EDITOR":
                 state = "EDITOR"
+                continue
+            elif isinstance(menu_action, tuple) and menu_action[0] == "PLAY_CUSTOM":
+                state = "PLAYING"
+                screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types = load_level(menu_action[1])
+                last_game_state = "IDLE"
                 continue
             else:
                 current_level_idx = menu_action

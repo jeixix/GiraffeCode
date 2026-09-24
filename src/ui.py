@@ -17,13 +17,13 @@ def load_icon(name, size):
     return None
 
 class Button:
-    def __init__(self, x, y, width, height, text, color, hover_color, action, icon=None, icon_pos="right"):
+    def __init__(self, x, y, width, height, text, color, hover_color, action, icon=None, icon_pos="right", font_size=32):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.color = color
         self.hover_color = hover_color
         self.action = action
-        self.font = pygame.font.Font(None, 32)
+        self.font = pygame.font.Font(None, font_size)
         self.icon = icon
         self.icon_pos = icon_pos
         
