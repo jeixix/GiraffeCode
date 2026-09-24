@@ -53,6 +53,12 @@ CHARACTERS = {
         "desc": "Guide the fast cheetah to the gazelle!"
     }
 }
+def get_base_data_dir():
+    """Returns directory where user data/saves should persist (binary dir if frozen, project root if dev)"""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
@@ -63,8 +69,7 @@ def get_resource_path(relative_path):
 
 def get_save_file_path():
     try:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(base_dir, "progress.json")
+        return os.path.join(get_base_data_dir(), "progress.json")
     except Exception:
         return "progress.json"
 
@@ -250,6 +255,8 @@ def character_select_menu(screen, assets):
                 screen = get_screen()
                 menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                 menu_overlay.fill((255, 255, 255, 140))
+                if assets.get("menu_bg_raw"):
+                    bg_image = pygame.transform.scale(assets["menu_bg_raw"], screen.get_size())
             action1 = btn1.handle_event(event)
             if action1:
                 return action1
@@ -382,6 +389,8 @@ def main_menu(screen, selected_char, assets, completed_levels):
                 screen = get_screen()
                 menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                 menu_overlay.fill((255, 255, 255, 140))
+                if assets.get("menu_bg_raw"):
+                    bg_image = pygame.transform.scale(assets["menu_bg_raw"], screen.get_size())
                 btn_fs.rect.x = screen.get_width() - 210
                 btn_change_hero.rect.x = screen.get_width() - 210
                 btn_editor.rect.x = screen.get_width() - 415
@@ -414,6 +423,8 @@ def main_menu(screen, selected_char, assets, completed_levels):
                 screen = get_screen()
                 menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                 menu_overlay.fill((255, 255, 255, 140))
+                if assets.get("menu_bg_raw"):
+                    bg_image = pygame.transform.scale(assets["menu_bg_raw"], screen.get_size())
                 btn_fs.text = "Windowed" if IS_FULLSCREEN else "Fullscreen"
                 btn_fs.rect.x = screen.get_width() - 210
                 btn_change_hero.rect.x = screen.get_width() - 210
@@ -758,7 +769,7 @@ def main():
             # Draw
             screen.fill((135, 206, 235))
             # Header info with real hero emoji image
-            lvl_name = level.name_giraffe if selected_character == 'giraffe' else level.name_cheetah
+            lvl_name = getattr(level, "name_giraffe", level.name) if selected_character == 'giraffe' else getattr(level, "name_cheetah", level.name)
             part1 = small_font.render(f"{lvl_name}   |   ", True, (0, 0, 0))
             hx = MARGIN
             screen.blit(part1, (hx, 10))
@@ -829,7 +840,7 @@ def main_wrapper():
     except Exception as e:
         import traceback
         try:
-            crash_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "crash.log")
+            crash_path = os.path.join(get_base_data_dir(), "crash.log")
             with open(crash_path, "w") as f:
                 traceback.print_exc(file=f)
         except Exception:

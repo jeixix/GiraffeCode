@@ -12,6 +12,12 @@ from src.levels import Level
 from src.sound import sound_manager
 from src.ui import Button, load_icon
 
+def get_base_data_dir():
+    """Returns directory where user data/saves should persist (binary dir if frozen, project root if dev)"""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def get_resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -21,8 +27,7 @@ def get_resource_path(relative_path):
 
 def get_custom_levels_path():
     try:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(base_dir, "custom_levels.json")
+        return os.path.join(get_base_data_dir(), "custom_levels.json")
     except Exception:
         return "custom_levels.json"
 
@@ -134,6 +139,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
     font_toast = pygame.font.Font(None, 28)
 
     # Load background
+    raw_bg = None
     bg_image = None
     bg_path = get_resource_path("assets/menu_bg.jpg")
     if os.path.exists(bg_path):
@@ -236,6 +242,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
     mouse_down = False
     hero_char_key = "giraffe" if selected_char == "giraffe" else "cheetah"
     target_char_key = "tree" if selected_char == "giraffe" else "gazelle"
+    cached_scaled_tiles = {}
 
     while True:
         mouse_pos = pygame.mouse.get_pos()
@@ -317,7 +324,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                 is_fullscreen_setter(not is_fullscreen_getter())
                 screen = get_screen_fn()
-                if bg_image:
+                if raw_bg is not None:
                     bg_image = pygame.transform.scale(raw_bg, screen.get_size())
                 menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                 menu_overlay.fill((255, 255, 255, 140))
@@ -363,7 +370,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                 elif act == "TOGGLE_FS":
                     is_fullscreen_setter(not is_fullscreen_getter())
                     screen = get_screen_fn()
-                    if bg_image:
+                    if raw_bg is not None:
                         bg_image = pygame.transform.scale(raw_bg, screen.get_size())
                     menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                     menu_overlay.fill((255, 255, 255, 140))
@@ -572,6 +579,20 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         hero_img = assets.get(hero_char_key)
         target_img = assets.get(target_char_key)
 
+        # Cache scaled tile surfaces when tile_size changes (eliminates 6000 transforms/sec)
+        if tile_size not in cached_scaled_tiles:
+            c_grass = pygame.transform.scale(grass_img, (tile_size, tile_size)) if grass_img else None
+            c_rock = pygame.transform.scale(rock_img, (tile_size, tile_size)) if rock_img else None
+            c_water = pygame.transform.scale(water_img, (tile_size, tile_size)) if water_img else None
+            inner_s = max(1, tile_size - 8)
+            c_hero = pygame.transform.scale(hero_img, (inner_s, inner_s)) if hero_img else None
+            c_target = pygame.transform.scale(target_img, (inner_s, inner_s)) if target_img else None
+            cached_scaled_tiles[tile_size] = {
+                "grass": c_grass, "rock": c_rock, "water": c_water,
+                "hero": c_hero, "target": c_target
+            }
+        scaled_tiles = cached_scaled_tiles[tile_size]
+
         obs_set = set((int(o[0]), int(o[1])) for o in state.get("obstacles", []))
         obs_map = state.get("obstacle_types", {})
 
@@ -582,9 +603,8 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                 cell_rect = pygame.Rect(grid_start_x + c * tile_size, grid_start_y + r * tile_size, tile_size, tile_size)
 
                 # 1. Base grass
-                if grass_img:
-                    scaled_grass = pygame.transform.scale(grass_img, (tile_size, tile_size))
-                    screen.blit(scaled_grass, cell_rect)
+                if scaled_tiles["grass"]:
+                    screen.blit(scaled_tiles["grass"], cell_rect)
                 else:
                     pygame.draw.rect(screen, (130, 200, 120), cell_rect)
 
@@ -592,15 +612,13 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                 if (c, r) in obs_set:
                     t_type = obs_map.get(f"{c},{r}", "rock")
                     if t_type == "water":
-                        if water_img:
-                            scaled_water = pygame.transform.scale(water_img, (tile_size, tile_size))
-                            screen.blit(scaled_water, cell_rect)
+                        if scaled_tiles["water"]:
+                            screen.blit(scaled_tiles["water"], cell_rect)
                         else:
                             pygame.draw.rect(screen, (50, 120, 230), cell_rect)
                     else:
-                        if rock_img:
-                            scaled_rock = pygame.transform.scale(rock_img, (tile_size, tile_size))
-                            screen.blit(scaled_rock, cell_rect)
+                        if scaled_tiles["rock"]:
+                            screen.blit(scaled_tiles["rock"], cell_rect)
                         else:
                             pygame.draw.rect(screen, (120, 120, 120), cell_rect)
 
@@ -608,22 +626,39 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                 if (c, r) == (state["start_x"], state["start_y"]):
                     # Golden start halo
                     pygame.draw.rect(screen, (255, 230, 80, 140), cell_rect, 4, border_radius=6)
-                    if hero_img:
-                        scaled_hero = pygame.transform.scale(hero_img, (tile_size - 8, tile_size - 8))
-                        screen.blit(scaled_hero, (cell_rect.x + 4, cell_rect.y + 4))
+                    if scaled_tiles["hero"]:
+                        screen.blit(scaled_tiles["hero"], (cell_rect.x + 4, cell_rect.y + 4))
 
-                    # Direction indicator arrow
-                    dir_arrows = ["⬆️", "➡️", "⬇️", "⬅️"]
-                    arr_txt = font_ui_bold.render(dir_arrows[state["start_dir"]], True, (255, 0, 0))
-                    screen.blit(arr_txt, (cell_rect.right - 24, cell_rect.top + 2))
+                    # Direction indicator arrow vector triangle (prevents missing-font tofu boxes)
+                    ax = cell_rect.centerx
+                    ay = cell_rect.centery
+                    arrow_d = state["start_dir"] # 0: Up, 1: Right, 2: Down, 3: Left
+                    arrow_offset = tile_size // 2 - 4
+                    if arrow_d == 0:   # Up
+                        tip = (ax, ay - arrow_offset)
+                        p1 = (ax - 7, ay - arrow_offset + 12)
+                        p2 = (ax + 7, ay - arrow_offset + 12)
+                    elif arrow_d == 1: # Right
+                        tip = (ax + arrow_offset, ay)
+                        p1 = (ax + arrow_offset - 12, ay - 7)
+                        p2 = (ax + arrow_offset - 12, ay + 7)
+                    elif arrow_d == 2: # Down
+                        tip = (ax, ay + arrow_offset)
+                        p1 = (ax - 7, ay + arrow_offset - 12)
+                        p2 = (ax + 7, ay + arrow_offset - 12)
+                    elif arrow_d == 3: # Left
+                        tip = (ax - arrow_offset, ay)
+                        p1 = (ax - arrow_offset + 12, ay - 7)
+                        p2 = (ax - arrow_offset + 12, ay + 7)
+                    pygame.draw.polygon(screen, (255, 40, 40), [tip, p1, p2])
+                    pygame.draw.polygon(screen, (255, 255, 255), [tip, p1, p2], 2)
 
                 # 4. Goal Tile (Target)
                 if (c, r) == (state["goal_x"], state["goal_y"]):
                     # Red target halo
                     pygame.draw.rect(screen, (255, 100, 100, 140), cell_rect, 4, border_radius=6)
-                    if target_img:
-                        scaled_target = pygame.transform.scale(target_img, (tile_size - 8, tile_size - 8))
-                        screen.blit(scaled_target, (cell_rect.x + 4, cell_rect.y + 4))
+                    if scaled_tiles["target"]:
+                        screen.blit(scaled_tiles["target"], (cell_rect.x + 4, cell_rect.y + 4))
 
                 # Grid border
                 pygame.draw.rect(screen, (160, 200, 160), cell_rect, 1)

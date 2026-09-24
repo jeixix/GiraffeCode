@@ -1,5 +1,7 @@
 import os
 import sys
+import math
+import time
 import pygame
 from src.sound import sound_manager
 
@@ -224,8 +226,6 @@ class UI:
         if self.is_running or tutorial_level is None:
             return
             
-        import math
-        import time
         bounce = math.sin(time.time() * 6) * 5
         tut_color = (255, 60, 60)
         

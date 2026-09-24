@@ -8,13 +8,14 @@ class GameState:
     def reset(self):
         self.giraffe = Giraffe(self.level.start_x, self.level.start_y, self.level.start_dir)
         self.state = "IDLE"  # IDLE, RUNNING, SUCCESS, CRASH
+        self.obstacle_set = set(tuple(o) for o in (self.level.obstacles or []))
         
     def is_valid_pos(self, x, y):
         if x < 0 or x >= self.level.width:
             return False
         if y < 0 or y >= self.level.height:
             return False
-        if (x, y) in self.level.obstacles:
+        if (x, y) in self.obstacle_set:
             return False
         return True
         

@@ -54,11 +54,16 @@ class Giraffe:
             bob = 0
 
         # Cycle through generated frame images
+        if not images:
+            return
         if isinstance(images, list):
             frame_idx = int(self.walk_frame) % len(images)
             image = images[frame_idx]
         else:
             image = images
+
+        if image is None:
+            return
 
         angle = wobble
         if self.direction == 0:
