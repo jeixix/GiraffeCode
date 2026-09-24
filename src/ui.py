@@ -1,6 +1,7 @@
 import os
 import sys
 import pygame
+from src.sound import sound_manager
 
 def load_icon(name, size):
     try:
@@ -108,14 +109,17 @@ class UI:
     def add_command(self, cmd):
         if not self.is_running and len(self.commands) < 100:
             self.commands.append(cmd)
+            sound_manager.play_click()
             
     def undo_command(self):
         if not self.is_running and self.commands:
             self.commands.pop()
+            sound_manager.play_click()
             
     def clear_commands(self):
         if not self.is_running:
             self.commands = []
+            sound_manager.play_click()
 
     def draw(self, surface, active_cmd_idx=None, tutorial_level=None):
         mouse_pos = pygame.mouse.get_pos()

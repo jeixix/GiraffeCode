@@ -9,7 +9,10 @@ Players can choose their favorite animal hero—a hungry **Giraffe** or a speedy
 ## 🌟 Features
 
 - **Choose Your Hero:** Interactive character selection screen. Play as the Giraffe to reach acacia leaves, or play as the Cheetah to catch the gazelle!
+- **Built-in Level Editor (🛠️):** Design and save custom savanna puzzles! Adjust grid dimensions, place obstacles, water, start, and goals. Features a mandatory BFS mathematical solvability checker that ensures custom levels are 100% solvable before allowing players to test and play them!
+- **Playful Audio Engine (🎵):** Immersive sound effects for movement steps, turn chirps, UI button pops, crash thuds, and joyful victory jingles with graceful device fallback.
 - **High-Quality Emoji Graphics:** The game uses bundled high-resolution Twemoji graphics for characters, targets, and UI icons, guaranteeing consistent, vibrant visuals across all operating systems without relying on missing system fonts.
+- **Educational "Loops" (`REPEAT`):** Teaches computational thinking and loop constructs, allowing players to repeat sequences cleanly.
 - **200 Solvable Levels:** 200 thoughtfully designed and procedurally generated levels ranging from gentle straight lines to complex maze puzzles. All 200 levels are mathematically verified to be 100% solvable!
 - **Real-Time Code Execution Highlighter:** Just like Scratch and Blockly, the command queue is rendered as visual code pills that glow golden in real time as the animal executes each step!
 - **Undo (⌫) & Emergency Stop (⏹):** Made a typo? Click **UNDO** or press `Backspace` to delete just the last command without wiping your whole queue. If you see a crash coming, click **STOP** to halt execution instantly.
@@ -158,6 +161,8 @@ GiraffeCode/
 │   ├── game_state.py   # Grid state, directional movement & collision detection
 │   ├── giraffe.py      # Player entity, smooth sub-pixel interpolation & walk animations
 │   ├── levels.py       # 200 verified solvable level definitions
+│   ├── editor.py       # Level editor with BFS mathematical solvability verification
+│   ├── sound.py        # Audio manager and procedural SFX playback engine
 │   ├── ui.py           # Buttons, visual code pills, highlighter & UI rendering
 │   └── scripts/        # Asset generation & walk cycle utility scripts
 ├── requirements.txt    # Python dependencies (pygame-ce, Pillow)

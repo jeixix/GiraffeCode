@@ -1,4 +1,5 @@
 import pygame
+from src.sound import sound_manager
 
 class Executor:
     def __init__(self, game_state, ui):
@@ -40,12 +41,17 @@ class Executor:
                         if count < 2:
                             self.loop_counters[self.command_index] = count + 1
                             self.command_index = 0
+                            sound_manager.play_turn()
                         else:
                             # Reset counter so it works correctly if repeated by a later outer loop
                             self.loop_counters[self.command_index] = 0
                             self.command_index += 1
                     else:
                         self.game_state.update_giraffe(cmd)
+                        if cmd == "FORWARD":
+                            sound_manager.play_step()
+                        elif cmd in ["LEFT", "RIGHT"]:
+                            sound_manager.play_turn()
                         self.command_index += 1
                         
                     self.last_step_time = current_time
