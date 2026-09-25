@@ -226,11 +226,14 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
     btn_clear = Button(20, 636, 150, 38, "Clear Grid", (230, 230, 230), (245, 245, 245), "CLEAR_GRID")
     btn_del = Button(20, 682, 150, 38, "Delete Level", (255, 160, 160), (255, 190, 190), "DEL_LEVEL")
 
+    icon_play = pygame.transform.scale(assets["emoji_play"], (22, 22)) if assets.get("emoji_play") else None
+    icon_save = pygame.transform.scale(assets["emoji_save"], (22, 22)) if assets.get("emoji_save") else None
+
     # Center Action Buttons (bottom bar)
     btn_test_play = Button(screen.get_width() // 2 - 210, screen.get_height() - 75, 200, 55,
-                           "Test & Play ▶", (100, 230, 100), (140, 255, 140), "TEST_PLAY")
+                           "Test & Play", (100, 230, 100), (140, 255, 140), "TEST_PLAY", icon=icon_play, icon_pos="right")
     btn_save = Button(screen.get_width() // 2 + 10, screen.get_height() - 75, 190, 55,
-                      "Save Level 💾", (255, 200, 80), (255, 220, 120), "SAVE_LEVEL")
+                      "Save Level", (255, 200, 80), (255, 220, 120), "SAVE_LEVEL", icon=icon_save, icon_pos="right")
 
     all_ui_buttons = tool_buttons + [
         btn_menu, btn_fs,
@@ -504,8 +507,14 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         pygame.draw.line(top_bar, (190, 190, 190), (0, 69), (screen.get_width(), 69), 2)
         screen.blit(top_bar, (0, 0))
 
-        title = font_title.render("🛠️ Level Editor", True, (0, 100, 0))
-        screen.blit(title, (180, 16))
+        if assets.get("emoji_editor"):
+            ed_icon = pygame.transform.scale(assets["emoji_editor"], (30, 30))
+            screen.blit(ed_icon, (180, 20))
+            title = font_title.render("Level Editor", True, (0, 100, 0))
+            screen.blit(title, (218, 16))
+        else:
+            title = font_title.render("Level Editor", True, (0, 100, 0))
+            screen.blit(title, (180, 16))
 
         # Level name badge in header
         level_display_name = state.get("name", "Custom Level")

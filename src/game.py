@@ -365,20 +365,22 @@ def main_menu(screen, selected_char, assets, completed_levels):
         btn_icon = star_icon if is_done else None
         btn = Button(screen.get_width() // 2 - 300, 0, 600, 60, lvl_name, c_color, c_hover, i, icon=btn_icon, icon_pos="left")
         buttons.append(btn)
-    fs_w = 120
+    fs_w = 115
     hero_w = 145
-    cust_w = 140
+    cust_w = 145
     ed_w = 140
     gap = 10
     top_y = 16
     btn_h = 36
 
     icon_switch = pygame.transform.scale(assets["emoji_switch"], (18, 18)) if assets.get("emoji_switch") else None
+    icon_custom = pygame.transform.scale(assets["emoji_custom"], (18, 18)) if assets.get("emoji_custom") else None
+    icon_editor = pygame.transform.scale(assets["emoji_editor"], (18, 18)) if assets.get("emoji_editor") else None
 
-    btn_fs = Button(0, top_y, fs_w, btn_h, "Windowed" if IS_FULLSCREEN else "Fullscreen", (110, 160, 255), (160, 205, 255), "TOGGLE_FS", font_size=26)
-    btn_change_hero = Button(0, top_y, hero_w, btn_h, "Switch Hero", (255, 235, 60), (255, 248, 170), "SWITCH_HERO", icon=icon_switch, icon_pos="right", font_size=26)
-    btn_custom = Button(0, top_y, cust_w, btn_h, "Play Custom 🎮", (120, 220, 130), (160, 245, 170), "PLAY_CUSTOM_MENU", font_size=26)
-    btn_editor = Button(0, top_y, ed_w, btn_h, "Level Editor 🛠️", (255, 185, 60), (255, 215, 110), "LEVEL_EDITOR", font_size=26)
+    btn_fs = Button(0, top_y, fs_w, btn_h, "Windowed" if IS_FULLSCREEN else "Fullscreen", (110, 160, 255), (160, 205, 255), "TOGGLE_FS", font_size=25)
+    btn_change_hero = Button(0, top_y, hero_w, btn_h, "Switch Hero", (255, 235, 60), (255, 248, 170), "SWITCH_HERO", icon=icon_switch, icon_pos="right", font_size=25)
+    btn_custom = Button(0, top_y, cust_w, btn_h, "Play Custom", (120, 220, 130), (160, 245, 170), "PLAY_CUSTOM_MENU", icon=icon_custom, icon_pos="right", font_size=25)
+    btn_editor = Button(0, top_y, ed_w, btn_h, "Level Editor", (255, 185, 60), (255, 215, 110), "LEVEL_EDITOR", icon=icon_editor, icon_pos="right", font_size=25)
 
     def reposition_header_buttons(scr_w):
         btn_fs.rect.x = scr_w - 20 - fs_w
@@ -563,6 +565,10 @@ def main():
     assets["emoji_switch"] = load_image("emoji_switch.png")
     assets["emoji_leaf"] = load_image("emoji_leaf.png")
     assets["emoji_gazelle"] = load_image("emoji_gazelle.png")
+    assets["emoji_editor"] = load_image("emoji_editor.png")
+    assets["emoji_custom"] = load_image("emoji_custom.png")
+    assets["emoji_save"] = load_image("emoji_save.png")
+    assets["emoji_play"] = load_image("emoji_play.png")
 
     assets_cache = {}
     def get_scaled_assets(tile_size):

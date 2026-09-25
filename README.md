@@ -32,6 +32,7 @@ Plan a sequence of instructions to guide your animal to the goal tile without cr
 - **FORWARD:** Moves your hero 1 tile forward in the direction they are facing.
 - **LEFT:** Rotates your hero 90° counter-clockwise.
 - **RIGHT:** Rotates your hero 90° clockwise.
+- **REPEAT 🔁:** Repeats the sequence of instructions in the queue (loops up to 2 extra times).
 - **UNDO ⌫:** Removes the last added command from the queue.
 - **CLEAR 🗑:** Clears the entire queue and resets the hero to start.
 - **RUN ▶ / STOP ⏹:** Starts executing your code, or stops execution immediately.
@@ -42,11 +43,12 @@ Plan a sequence of instructions to guide your animal to the goal tile without cr
 | **`W` or `↑ Up Arrow`** | Add `FORWARD` command |
 | **`A` or `← Left Arrow`** | Add `LEFT` command |
 | **`D` or `→ Right Arrow`** | Add `RIGHT` command |
+| **`R`** | Add `REPEAT` loop command (🔁) |
 | **`Backspace`** | `UNDO` last command (⌫) |
 | **`C`** | `CLEAR` entire command queue |
 | **`Enter`** | `RUN` / `STOP` execution |
 | **`SPACE`** | Advance to Next Level (after winning) or Retry (after crashing) |
-| **`ESC`** | Return to Main Menu |
+| **`ESC`** | Return to Main Menu / Editor |
 | **`F11`** | Toggle Fullscreen / Windowed Mode |
 
 ---
