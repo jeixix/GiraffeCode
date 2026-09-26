@@ -908,6 +908,7 @@ def main():
                 state = "MENU"
                 continue
         elif state == "PLAYING":
+            mouse_pos = pygame.mouse.get_pos()
             char_info = CHARACTERS[selected_character]
             transitioned = False
             for event in pygame.event.get():
