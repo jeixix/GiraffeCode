@@ -18,7 +18,30 @@ class SoundManager:
         self.available = False
         self.sounds = {}
         self.enabled = True
+        self._load_mute_pref()
         self._init_mixer()
+
+    def _load_mute_pref(self):
+        try:
+            from src.i18n import load_settings
+            settings = load_settings()
+            if "sound_enabled" in settings:
+                self.enabled = bool(settings["sound_enabled"])
+        except Exception:
+            pass
+
+    def toggle_mute(self):
+        self.enabled = not self.enabled
+        try:
+            from src.i18n import save_settings
+            save_settings({"sound_enabled": self.enabled})
+        except Exception:
+            pass
+        return self.enabled
+
+    @property
+    def is_muted(self):
+        return not self.enabled
 
     def _init_mixer(self):
         try:

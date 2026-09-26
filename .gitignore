@@ -22,10 +22,16 @@ rename_levels.py
 test_dummy*.py
 test_space.py
 crash.log
+*.log
 
-# System files
+# System & IDE files
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
 
-# Local player progress
+# Local player progress & user settings
 progress.json
+settings.json
 custom_levels.json
+

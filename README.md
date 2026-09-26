@@ -9,6 +9,12 @@ Players can choose their favorite animal hero—a hungry **Giraffe** or a speedy
 ## 🌟 Features
 
 - **Choose Your Hero:** Interactive character selection screen. Play as the Giraffe to reach acacia leaves, or play as the Cheetah to catch the gazelle!
+- **Step-by-Step Debugger (`STEP ⏭️`):** Essential educational tool allowing young coders to execute their code one command at a time, seeing their hero move while the corresponding code pill glows golden.
+- **Adjustable Execution Speed (🐢 Normal / ⚡ Turbo):** Toggle between gentle 600ms step pacing for beginners and rapid 250ms turbo speed for testing long solutions.
+- **10-Chapter Paginated Level Selector (🗺️):** All 200 levels are cleanly organized across 10 themed savanna biomes (20 levels per chapter in an intuitive 5x4 grid) with quick-jump world pills and arrow navigation.
+- **Bilingual English 🇬🇧 / Spanish 🇪🇸 Localization:** One-click language switching (`L` or top-right button) instantly translates all commands, tutorials, dialogue overlays, and level names.
+- **Global Sound Mute Toggle (🔊 / 🔇):** Easily mute all sound effects with a single click or keyboard shortcut (`M`), perfect for classroom and quiet settings.
+- **Visual "Juice" & Particle Effects (✨):** Cheerful, lightweight particle bursts: fluttering leaves when the giraffe reaches the acacia tree, sparkle stars when the cheetah catches the gazelle, running dust clouds under animal paws, water splashes, and victory confetti.
 - **Built-in Level Editor (🛠️):** Design and save custom savanna puzzles! Adjust grid dimensions, place obstacles, water, start, and goals. Features a mandatory BFS mathematical solvability checker that ensures custom levels are 100% solvable before allowing players to test and play them!
 - **Playful Audio Engine (🎵):** Immersive sound effects for movement steps, turn chirps, UI button pops, crash thuds, and joyful victory jingles with graceful device fallback.
 - **High-Quality Emoji Graphics:** The game uses bundled high-resolution Twemoji graphics for characters, targets, and UI icons, guaranteeing consistent, vibrant visuals across all operating systems without relying on missing system fonts.
@@ -35,7 +41,11 @@ Plan a sequence of instructions to guide your animal to the goal tile without cr
 - **REPEAT 🔁:** Repeats the sequence of instructions in the queue (loops up to 2 extra times).
 - **UNDO ⌫:** Removes the last added command from the queue.
 - **CLEAR 🗑:** Clears the entire queue and resets the hero to start.
+- **STEP ⏭️:** Single-step debugger: executes exactly one command and pauses.
 - **RUN ▶ / STOP ⏹:** Starts executing your code, or stops execution immediately.
+- **Speed Toggle (1x / 2x):** Switch between Normal and Turbo execution speed.
+- **Mute Toggle (Sound ON/OFF):** Silences or unmutes sound effects.
+- **Language Toggle (EN / ES):** Switches interface between English and Spanish.
 
 ### ⌨️ Keyboard Shortcuts
 | Key | Action |
@@ -46,7 +56,12 @@ Plan a sequence of instructions to guide your animal to the goal tile without cr
 | **`R`** | Add `REPEAT` loop command (🔁) |
 | **`Backspace`** | `UNDO` last command (⌫) |
 | **`C`** | `CLEAR` entire command queue |
+| **`S`** | `STEP` (Single-step debugger) |
 | **`Enter`** | `RUN` / `STOP` execution |
+| **`T`** | Toggle Speed (`Normal` / `Turbo`) |
+| **`M`** | Toggle Sound Mute (`ON` / `OFF`) |
+| **`L`** | Toggle Language (`EN` / `ES`) |
+| **`←` / `→` or `PgUp` / `PgDn`** | Previous / Next Chapter in Level Select |
 | **`SPACE`** | Advance to Next Level (after winning) or Retry (after crashing) |
 | **`ESC`** | Return to Main Menu / Editor |
 | **`F11`** | Toggle Fullscreen / Windowed Mode |
@@ -159,13 +174,15 @@ GiraffeCode/
 ├── src/
 │   ├── main.py         # Entry point and launcher script
 │   ├── game.py         # Main loop, menus, dynamic scaling & terrain generation
-│   ├── executor.py     # Command execution engine, step timing & state sync
+│   ├── executor.py     # Command execution engine, step debugger & speed controls
 │   ├── game_state.py   # Grid state, directional movement & collision detection
 │   ├── giraffe.py      # Player entity, smooth sub-pixel interpolation & walk animations
 │   ├── levels.py       # 200 verified solvable level definitions
 │   ├── editor.py       # Level editor with BFS mathematical solvability verification
-│   ├── sound.py        # Audio manager and procedural SFX playback engine
+│   ├── sound.py        # Audio manager, mute toggle & procedural SFX playback engine
 │   ├── ui.py           # Buttons, visual code pills, highlighter & UI rendering
+│   ├── i18n.py         # Bilingual localization engine (English 🇬🇧 / Spanish 🇪🇸)
+│   ├── particles.py    # Visual particle engine (leaf munch, sparkles, dust, confetti)
 │   └── scripts/        # Asset generation & walk cycle utility scripts
 ├── requirements.txt    # Python dependencies (pygame-ce, Pillow)
 ├── .gitignore          # Git exclusion rules

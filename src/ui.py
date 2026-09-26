@@ -4,6 +4,7 @@ import math
 import time
 import pygame
 from src.sound import sound_manager
+from src.i18n import t
 
 def load_icon(name, size):
     try:
@@ -70,13 +71,14 @@ class UI:
         self.icon_stop = load_icon("emoji_stop.png", (20, 20))
         self.icon_repeat = load_icon("emoji_repeat.png", (22, 22))
         
-        self.btn_fwd = Button(20, btn_y, 110, btn_h, "FORWARD", (100, 255, 100), (150, 255, 150), "FORWARD")
-        self.btn_lft = Button(140, btn_y, 90, btn_h, "LEFT", (100, 100, 255), (150, 150, 255), "LEFT")
-        self.btn_rgt = Button(240, btn_y, 90, btn_h, "RIGHT", (255, 100, 100), (255, 150, 150), "RIGHT")
-        self.btn_rep = Button(340, btn_y, 110, btn_h, "REPEAT", (220, 150, 255), (235, 180, 255), "REPEAT", icon=self.icon_repeat)
-        self.btn_undo = Button(460, btn_y, 100, btn_h, "UNDO", (255, 175, 75), (255, 200, 115), "UNDO", icon=self.icon_undo)
-        self.btn_clear = Button(570, btn_y, 100, btn_h, "CLEAR", (210, 210, 210), (230, 230, 230), "CLEAR", icon=self.icon_clear)
-        self.btn_run = Button(680, btn_y, 110, btn_h, "RUN", (255, 200, 0), (255, 230, 100), "RUN", icon=self.icon_run)
+        self.btn_fwd = Button(15, btn_y, 98, btn_h, t("cmd_forward"), (100, 255, 100), (150, 255, 150), "FORWARD", font_size=20)
+        self.btn_lft = Button(121, btn_y, 80, btn_h, t("cmd_left"), (100, 100, 255), (150, 150, 255), "LEFT", font_size=20)
+        self.btn_rgt = Button(209, btn_y, 80, btn_h, t("cmd_right"), (255, 100, 100), (255, 150, 150), "RIGHT", font_size=20)
+        self.btn_rep = Button(297, btn_y, 94, btn_h, t("cmd_repeat"), (220, 150, 255), (235, 180, 255), "REPEAT", icon=self.icon_repeat, font_size=20)
+        self.btn_undo = Button(399, btn_y, 86, btn_h, t("cmd_undo"), (255, 175, 75), (255, 200, 115), "UNDO", icon=self.icon_undo, font_size=20)
+        self.btn_clear = Button(493, btn_y, 82, btn_h, t("cmd_clear"), (210, 210, 210), (230, 230, 230), "CLEAR", icon=self.icon_clear, font_size=20)
+        self.btn_step = Button(583, btn_y, 82, btn_h, t("cmd_step"), (110, 200, 255), (155, 230, 255), "STEP", font_size=20)
+        self.btn_run = Button(673, btn_y, 94, btn_h, t("cmd_run"), (255, 200, 0), (255, 230, 100), "RUN", icon=self.icon_run, font_size=20)
         
         self.buttons = [
             self.btn_fwd,
@@ -85,24 +87,38 @@ class UI:
             self.btn_rep,
             self.btn_undo,
             self.btn_clear,
+            self.btn_step,
             self.btn_run
         ]
-        self.hint_font = pygame.font.Font(None, 19)
+        self.hint_font = pygame.font.Font(None, 18)
         self.font = pygame.font.Font(None, 20)
         self.arrow_font = pygame.font.Font(None, 20)
-        self.empty_font = pygame.font.Font(None, 24)
-        self.tut_font = pygame.font.Font(None, 28)
+        self.empty_font = pygame.font.Font(None, 22)
+        self.tut_font = pygame.font.Font(None, 26)
+
+    def refresh_labels(self):
+        self.btn_fwd.text = t("cmd_forward")
+        self.btn_lft.text = t("cmd_left")
+        self.btn_rgt.text = t("cmd_right")
+        self.btn_rep.text = t("cmd_repeat")
+        self.btn_undo.text = t("cmd_undo")
+        self.btn_clear.text = t("cmd_clear")
+        self.btn_step.text = t("cmd_step")
+        if self.is_running:
+            self.btn_run.text = t("cmd_stop")
+        else:
+            self.btn_run.text = t("cmd_run")
         
     def set_running(self, running):
         self.is_running = running
         if running:
-            self.btn_run.text = "STOP"
+            self.btn_run.text = t("cmd_stop")
             self.btn_run.icon = self.icon_stop
             self.btn_run.color = (255, 80, 80)
             self.btn_run.hover_color = (255, 120, 120)
             self.btn_run.action = "STOP"
         else:
-            self.btn_run.text = "RUN"
+            self.btn_run.text = t("cmd_run")
             self.btn_run.icon = self.icon_run
             self.btn_run.color = (255, 200, 0)
             self.btn_run.hover_color = (255, 230, 100)
@@ -136,22 +152,28 @@ class UI:
             
         # Draw keyboard hint on the right
         hint_lines = [
-            "Keyboard shortcuts:",
-            "Up/W : Forward     Backspace : Undo",
-            "Left/A : Left      Enter : Run/Stop",
-            "Right/D : Right    C : Clear all",
-            "R : Repeat         F11 : Fullscreen"
+            t("hint_title"),
+            t("hint_fwd"),
+            t("hint_turn"),
+            t("hint_step"),
+            t("hint_rep"),
+            t("hint_fs")
         ]
         for idx, line in enumerate(hint_lines):
             color = (80, 80, 80) if idx == 0 else (120, 120, 120)
             hint_surf = self.hint_font.render(line, True, color)
-            surface.blit(hint_surf, (800, self.height - 85 + idx * 16))
+            surface.blit(hint_surf, (778, self.height - 105 + idx * 16))
             
         # Draw program queue pills
-        short_names = {"FORWARD": "FWD", "LEFT": "LFT", "RIGHT": "RGT", "REPEAT": "REP"}
+        short_names = {
+            "FORWARD": t("pill_forward"),
+            "LEFT": t("pill_left"),
+            "RIGHT": t("pill_right"),
+            "REPEAT": t("pill_repeat")
+        }
         
         if not self.commands:
-            text_surf = self.empty_font.render("Your Code Queue: Click buttons below or use keyboard to build instructions!", True, (110, 110, 110))
+            text_surf = self.empty_font.render(t("empty_queue_hint"), True, (110, 110, 110))
             surface.blit(text_surf, (20, self.height - 138))
         else:
             cur_x = 20
@@ -252,15 +274,15 @@ class UI:
             
         if tutorial_level == 0:
             if len(self.commands) == 0:
-                draw_hint("Click FORWARD to move!", self.btn_fwd.rect)
+                draw_hint(t("tut_step1"), self.btn_fwd.rect)
             else:
-                draw_hint("Click RUN to execute!", self.btn_run.rect)
+                draw_hint(t("tut_step2"), self.btn_run.rect)
         elif tutorial_level == 1:
             if len(self.commands) == 0:
                 # Point roughly between LEFT and RIGHT
                 fake_rect = self.btn_lft.rect.copy()
                 fake_rect.width += self.btn_rgt.rect.width + 10
-                draw_hint("Use LEFT or RIGHT to turn!", fake_rect)
+                draw_hint(t("tut_turn"), fake_rect)
         elif tutorial_level == 2:
             if len(self.commands) > 0 and "REPEAT" not in self.commands:
-                draw_hint("Try REPEAT to do it again!", self.btn_rep.rect)
+                draw_hint(t("tut_repeat"), self.btn_rep.rect)
