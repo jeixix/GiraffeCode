@@ -78,7 +78,7 @@ Plan a sequence of instructions to guide your animal to the goal tile without cr
 
 1. **Clone the repository:**
    ```bash
-   git clone git@github.com:jeixix/GiraffeCode.git
+   git clone https://github.com/jeixix/GiraffeCode.git
    cd GiraffeCode
    ```
 
@@ -98,6 +98,15 @@ Plan a sequence of instructions to guide your animal to the goal tile without cr
      python -m venv venv
      .\venv\Scripts\Activate.ps1
      ```
+     > **💡 Note on Windows PowerShell Execution Policy:**
+     > By default, Windows sets its execution policy to `Restricted` to prevent unverified scripts from running, which may cause PowerShell to block `Activate.ps1` with the error: *`File ... cannot be loaded because running scripts is disabled on this system`*.
+     >
+     > You can safely allow activation scripts **only for your current terminal session** (without altering any permanent system-wide security settings) by running:
+     > ```powershell
+     > Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+     > .\venv\Scripts\Activate.ps1
+     > ```
+     > *(Alternatively, you can simply use the standard Windows **Command Prompt (`cmd.exe`)**, which does not have this restriction.)*
 
 3. **Install dependencies:**
    ```bash
