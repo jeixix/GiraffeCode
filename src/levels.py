@@ -10,6 +10,42 @@ class Level:
         self.goal_y = goal_y
         self.obstacles = obstacles or []
 
+    def get_title(self, idx=None, character="giraffe", lang=None, include_prefix=True):
+        if lang is None:
+            try:
+                from src.i18n import get_lang
+                lang = get_lang()
+            except Exception:
+                lang = "EN"
+
+        if getattr(self, "is_custom", False) or getattr(self, "name", "") == "Custom Level":
+            if self.name == "Custom Level":
+                return "Nivel Personalizado" if lang == "ES" else "Custom Level"
+            return self.name
+
+        if idx is None:
+            try:
+                if self.name.startswith("Level "):
+                    idx = int(self.name.split(":")[0].replace("Level ", "").strip()) - 1
+            except Exception:
+                idx = 0
+
+        prefix = f"{'Nivel' if lang == 'ES' else 'Level'} {idx + 1}: " if include_prefix else ""
+
+        if character == "cheetah":
+            words = CHEETAH_WORDS_ES if lang == "ES" else CHEETAH_WORDS_EN
+            sub = words[idx % len(words)]
+        else:
+            if lang == "ES" and idx is not None and 0 <= idx < len(GIRAFFE_TITLES_ES):
+                sub = GIRAFFE_TITLES_ES[idx]
+            elif idx is not None and 0 <= idx < len(GIRAFFE_TITLES_EN):
+                sub = GIRAFFE_TITLES_EN[idx]
+            else:
+                sub = self.name.split(":", 1)[-1].strip()
+
+        return prefix + sub
+
+
 LEVELS = [
     Level(
         name="Level 1: Straight to the Tree!",
@@ -1414,8 +1450,8 @@ LEVELS = [
 ]
 
 
-# --- Dynamically assigned Cheetah names ---
-cheetah_words = [
+# --- Bilingual Level Titles & Cheetah Words ---
+CHEETAH_WORDS_EN = [
     "Speedy Sprint", "Gazelle Chase", "Fast Paws", "Golden Coat",
     "Swift Hunter", "Rapid Race", "Cheetah Bound", "Prowling Path",
     "Quick Reflexes", "Turbo Trot", "Feline Flash", "Wind Runner",
@@ -1431,9 +1467,83 @@ cheetah_words = [
     "Feline Grace", "Turbo Paws"
 ]
 
+CHEETAH_WORDS_ES = [
+    "Carrera Veloz", "Caza de Gacela", "Patas Rápidas", "Manto Dorado",
+    "Cazador Veloz", "Carrera Rápida", "Salto de Guepardo", "Paso Acechante",
+    "Reflejos Rápidos", "Trote Turbo", "Destello Felino", "Corredor del Viento",
+    "Sprint Moteado", "Carrera de la Sabana", "Sprint de la Selva", "Pasos Sigilosos",
+    "Aproximación Silenciosa", "Impulso Repentino", "Corriendo Libre", "Velocidad del Rayo",
+    "Salto de Gran Felino", "Amigo Peludo", "Persigue el Objetivo", "Demonio Veloz",
+    "Territorio de Caza", "Sprint Polvoriento", "Salto del Río", "Patas Poderosas",
+    "Manchas Ocultas", "El Felino Más Rápido", "Corazón Acelerado", "¡Atrápame!",
+    "Ruta del Guepardo", "Sprint Soleado", "Carrera Matutina", "Sprint del Crepúsculo",
+    "Acecho de Medianoche", "Sprint Estrellado", "Maniobra Rápida", "Giro Veloz",
+    "Escape Ágil", "Esquiva Rápida", "El Secreto del Guepardo", "Héroe Moteado",
+    "Velocidad Dorada", "Sprint de la Sabana", "Cazador de la Selva", "Salto del Rayo",
+    "Gracia Felina", "Patas Turbo"
+]
+
+cheetah_words = CHEETAH_WORDS_EN
+
+GIRAFFE_TITLES_EN = [lvl.name.split(":", 1)[-1].strip() for lvl in LEVELS]
+
+GIRAFFE_TITLES_ES = [
+    "¡Directo al Árbol!", "¡Da la Vuelta!", "El Laberinto", "Paseo por la Sabana",
+    "Pasos de Jirafa", "Viaje de Cuello Largo", "Misión de la Acacia", "Bocadillo de Hojas",
+    "Sendero de la Selva", "Caminata Soleada", "Cruce del Río", "Árboles Altos",
+    "Prados Verdes", "Aventura de Safari", "Paseo al Atardecer", "Amigo Moteado",
+    "Explorador Salvaje", "Paseo por la Naturaleza", "Hojas Ocultas", "Camino Irregular",
+    "Travesuras de Monos", "Ruta del Elefante", "La Guarida del León", "Zigzag de Cebra",
+    "Carrera del Rinoceronte", "Sprint del Guepardo", "Estanque de Hipopótamos", "Arroyo de Cocodrilos",
+    "Carrera del Avestruz", "Bandada de Flamencos", "Madriguera de Suricatos", "Guarida de Hienas",
+    "Rama de Babuinos", "Salto del Leopardo", "Paso del Ñu", "Galope de Gacela",
+    "Paseo del Búfalo", "Lodazal del Jabalí", "Sendero de la Pitón", "Paso de la Tortuga",
+    "Colores de Camaleón", "Ojo de Águila", "Mirada de Buitre", "Termitero",
+    "Árbol Baobab", "Cauce Seco", "Sendero Polvoriento", "Cresta Rocosa",
+    "Dunas de Arena", "Manantial del Oasis", "Palmeral", "Terreno de Cactus",
+    "Arbusto Espinoso", "El Secreto de la Jirafa", "La Vista Más Alta", "Estirándose Arriba",
+    "De Puntillas", "Ramas Altas", "Hojas Dulces", "Hora de Comer",
+    "Jirafa Hambrienta", "Delicioso Bocadillo", "Banquete Verde", "Brisa de la Sabana",
+    "Rocío Matutino", "Sol de la Tarde", "Sombras del Atardecer", "Noche Estrellada",
+    "Paseo a la Luz de la Luna", "Safari al Amanecer", "Safari al Atardecer", "Día Nublado",
+    "Temporada de Lluvias", "Charcos Embarrados", "Hora del Chapuzón", "Refrescándose",
+    "Trabajo Sediento", "Abrevadero", "Caras Amigas", "Encuentro con Amigos",
+    "Jugando al Pilla-Pilla", "El Escondite", "Diversión a la Carrera", "Sendero de Acertijos",
+    "Ruta Difícil", "Camino Sinuoso", "Ruta en Zigzag", "Camino Circular",
+    "Hacia Adelante", "Giro a la Izquierda", "Giro a la Derecha", "Giro en U",
+    "Rotonda", "Arriba y Abajo", "Sobre la Colina", "Por el Valle",
+    "A Través del Río", "Bajo el Árbol", "Casi Llegamos", "Solo un Poco Más",
+    "Cueva Apacible", "Cueva Polvorienta", "Sendero Salvaje", "Sendero Polvoriento",
+    "Laberinto Enredado", "Sabana Alta", "Viaje Polvoriento", "Laberinto Enredado",
+    "Laberinto Apacible", "Sendero Peligroso", "Cruce Salvaje", "Cueva Valiente",
+    "Cresta Dorada", "Dunas Difíciles", "Valle Dorado", "Sabana Profunda",
+    "Arbusto Secreto", "Prado Lejano", "Roca Antigua", "Cueva Seca",
+    "Valle Veloz", "Cresta Valiente", "Cruce Soleado", "Roca Silenciosa",
+    "Árbol Antiguo", "Roca Difícil", "Cueva Salvaje", "Laberinto Difícil",
+    "Ruta Embarrada", "Viaje Sediento", "Oasis Silencioso", "Árbol Oculto",
+    "Roca Lejana", "Sendero Dorado", "Prado Sinuoso", "Cresta Feroz",
+    "Viaje Difícil", "Viaje Profundo", "Roca Rocosa", "Sabana Perdida",
+    "Roca Sinuosa", "Sendero Sinuoso", "Ruta Peligrosa", "Dunas Soleadas",
+    "Viaje Veloz", "Sprint Difícil", "Ruta Enredada", "Oasis Peligroso",
+    "Oasis Enredado", "Dunas Antiguas", "Laberinto Peligroso", "Arbusto Feroz",
+    "Sprint Difícil", "Laberinto Feroz", "Árbol Difícil", "Dunas Feroces",
+    "Sendero Silencioso", "Estanque Sinuoso", "Viaje Sinuoso", "Cresta Salvaje",
+    "Cresta Embarrada", "Prado Seco", "Prado Soleado", "Sabana Profunda",
+    "Sprint Veloz", "Cañón Enredado", "Sabana Dorada", "Oasis Seco",
+    "Dunas Secretas", "Arbusto Veloz", "Viaje Seco", "Prado Silencioso",
+    "Prado Dorado", "Llanuras Secretas", "Río Lejano", "Laberinto Peligroso",
+    "Cresta Perdida", "Cueva Sinuosa", "Cañón Feroz", "Prado Enredado",
+    "Cruce Seco", "Oasis Profundo", "Prado Soleado", "Sabana Embarrada",
+    "Laberinto Rocoso", "Prado Oculto", "Sprint Embarrado", "Viaje Feroz",
+    "Cueva Seca", "Viaje Polvoriento", "Viaje Sinuoso", "Río Dorado",
+    "Valle Difícil", "Viaje Sediento", "Río Antiguo", "Río Dorado",
+    "Sabana Difícil", "Oasis Sinuoso", "Cruce Veloz", "Cruce Alto"
+]
+
 for i, lvl in enumerate(LEVELS):
     lvl.name_giraffe = lvl.name
-    # Keep the 'Level X: ' prefix but use the cheetah words
+    # Keep the 'Level X: ' prefix but use the cheetah words for backwards compatibility
     prefix = f"Level {i+1}: "
     word = cheetah_words[i % len(cheetah_words)]
     lvl.name_cheetah = prefix + word
+

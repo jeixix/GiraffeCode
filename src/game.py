@@ -634,7 +634,7 @@ def main_menu(screen, selected_char, assets, completed_levels):
                 if lvl_idx >= len(LEVELS):
                     continue
                 lvl = LEVELS[lvl_idx]
-                lvl_name = lvl.name_giraffe if selected_char == "giraffe" else lvl.name_cheetah
+                lvl_name = lvl.get_title(lvl_idx, selected_char, get_lang(), include_prefix=False) if hasattr(lvl, "get_title") else (lvl.name_giraffe if selected_char == "giraffe" else lvl.name_cheetah)
                 is_done = lvl_idx in completed_levels
 
                 card_rect = pygame.Rect(grid_start_x + c * 188, grid_start_y + r * 102, 172, 90)
@@ -779,6 +779,7 @@ def main():
 
     playing_custom = False
     custom_level_obj = None
+    level = None
 
     # In-game top header action buttons
     btn_ingame_fs = Button(LOGICAL_WIDTH - 65, 8, 50, 32, "Win" if IS_FULLSCREEN else "Full", (110, 160, 255), (160, 205, 255), "TOGGLE_FS", font_size=18)
@@ -792,9 +793,13 @@ def main():
         btn_ingame_speed.text = f"1x {t('speed_normal')}" if (executor and executor.speed_mode == "NORMAL") else f"2x {t('speed_fast')}"
         btn_ingame_mute.text = t("sound_off") if sound_manager.is_muted else t("sound_on")
         btn_ingame_mute.color = (255, 180, 180) if sound_manager.is_muted else (210, 240, 210)
+        if level:
+            c_info = CHARACTERS[selected_character]
+            lvl_title = level.get_title(current_level_idx, selected_character, get_lang(), include_prefix=True) if hasattr(level, 'get_title') else getattr(level, 'name', '')
+            pygame.display.set_caption(f"SavannaCode - {c_info['name']} - {lvl_title}")
 
     def load_level(idx_or_level):
-        nonlocal current_level_idx, playing_custom, custom_level_obj
+        nonlocal current_level_idx, playing_custom, custom_level_obj, level
         if isinstance(idx_or_level, Level):
             level = idx_or_level
             custom_level_obj = level
@@ -810,7 +815,8 @@ def main():
         screen_h = LOGICAL_HEIGHT
         scr = screen  # Reuse existing screen
         char_info = CHARACTERS[selected_character]
-        pygame.display.set_caption(f"SavannaCode - {char_info['name']} - {level.name}")
+        lvl_title = level.get_title(idx, selected_character, get_lang(), include_prefix=True) if hasattr(level, 'get_title') else getattr(level, 'name', '')
+        pygame.display.set_caption(f"SavannaCode - {char_info['name']} - {lvl_title}")
         game_state = GameState(level)
         ui = UI(screen_w, screen_h)
         executor = Executor(game_state, ui)
@@ -1065,7 +1071,7 @@ def main():
             # Draw background
             screen.fill((135, 206, 235))
             # Header info with real hero emoji image
-            lvl_name = getattr(level, "name_giraffe", level.name) if selected_character == 'giraffe' else getattr(level, "name_cheetah", level.name)
+            lvl_name = level.get_title(current_level_idx, selected_character, get_lang(), include_prefix=True) if hasattr(level, "get_title") else getattr(level, "name", "")
             part1 = small_font.render(f"{lvl_name}   |   ", True, (0, 0, 0))
             hx = MARGIN
             screen.blit(part1, (hx, 10))
@@ -1076,7 +1082,8 @@ def main():
                 screen.blit(h_icon, (hx, 8))
                 hx += h_icon.get_width() + 6
             esc_target = t("level_editor") if playing_custom else t("menu")
-            part2 = small_font.render(f"{char_info['name']}  (ESC: {esc_target})", True, (0, 0, 0))
+            c_info = CHARACTERS[selected_character]
+            part2 = small_font.render(f"{c_info['name']}  (ESC: {esc_target})", True, (0, 0, 0))
             screen.blit(part2, (hx, 10))
 
             # Draw in-game header buttons
