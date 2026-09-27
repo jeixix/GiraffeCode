@@ -12,14 +12,14 @@ Players can choose their favorite animal hero—a hungry **Giraffe** or a speedy
 - **Step-by-Step Debugger (`STEP ⏭️`):** Essential educational tool allowing young coders to execute their code one command at a time, seeing their hero move while the corresponding code pill glows golden.
 - **Adjustable Execution Speed (🐢 Normal / ⚡ Turbo):** Toggle between gentle 600ms step pacing for beginners and rapid 250ms turbo speed for testing long solutions.
 - **10-Chapter Paginated Level Selector (🗺️):** All 200 levels are cleanly organized across 10 themed savanna biomes (20 levels per chapter in an intuitive 5x4 grid) with quick-jump world pills and arrow navigation.
-- **Bilingual English 🇬🇧 / Spanish 🇪🇸 Localization:** One-click language switching (`L` or top-right button) instantly translates all commands, tutorials, dialogue overlays, and level names.
+- **Bilingual English 🇬🇧 / Spanish 🇪🇸 Localization:** One-click language switching (`L` or top-right button) instantly translates all commands, code pills, tutorials, dialogue overlays, and all 200 level titles dynamically across both Giraffe and Cheetah heroes!
 - **Global Sound Mute Toggle (🔊 / 🔇):** Easily mute all sound effects with a single click or keyboard shortcut (`M`), perfect for classroom and quiet settings.
 - **Visual "Juice" & Particle Effects (✨):** Cheerful, lightweight particle bursts: fluttering leaves when the giraffe reaches the acacia tree, sparkle stars when the cheetah catches the gazelle, running dust clouds under animal paws, water splashes, and victory confetti.
 - **Built-in Level Editor (🛠️):** Design and save custom savanna puzzles! Adjust grid dimensions, place obstacles, water, start, and goals. Features a mandatory BFS mathematical solvability checker that ensures custom levels are 100% solvable before allowing players to test and play them!
 - **Playful Audio Engine (🎵):** Immersive sound effects for movement steps, turn chirps, UI button pops, crash thuds, and joyful victory jingles with graceful device fallback.
 - **High-Quality Emoji Graphics:** The game uses bundled high-resolution Twemoji graphics for characters, targets, and UI icons, guaranteeing consistent, vibrant visuals across all operating systems without relying on missing system fonts.
 - **Educational "Loops" (`REPEAT`):** Teaches computational thinking and loop constructs, allowing players to repeat sequences cleanly.
-- **200 Solvable Levels:** 200 thoughtfully designed and procedurally generated levels ranging from gentle straight lines to complex maze puzzles. All 200 levels are mathematically verified to be 100% solvable!
+- **200 Solvable Levels:** 200 thoughtfully designed and procedurally generated levels ranging from gentle straight lines to complex maze puzzles. All 200 levels are mathematically verified to be 100% solvable, with dynamic bilingual titles in English and Spanish for both animal heroes!
 - **Real-Time Code Execution Highlighter:** Just like Scratch and Blockly, the command queue is rendered as visual code pills that glow golden in real time as the animal executes each step!
 - **Undo (⌫) & Emergency Stop (⏹):** Made a typo? Click **UNDO** or press `Backspace` to delete just the last command without wiping your whole queue. If you see a crash coming, click **STOP** to halt execution instantly.
 - **Progress Tracking & Stars (⭐):** Your completed levels are saved automatically! Completed levels earn a gold star in the level select menu, tracking your journey to 200/200 stars.
@@ -123,10 +123,11 @@ You can compile the game into a single, standalone executable that bundles Pytho
    pip install -r requirements.txt pyinstaller
    ```
 
-2. Run PyInstaller (note the colon `:` used to separate paths on Linux):
+2. Run PyInstaller using the included specification file:
    ```bash
-   pyinstaller -y --onefile --noconsole --icon=assets/icon.png --add-data "assets/*:assets" --name GiraffeCode src/main.py
+   pyinstaller GiraffeCode.spec --noconfirm
    ```
+   *(Or alternatively build directly with custom flags: `pyinstaller -y --onefile --noconsole --icon=assets/icon.png --add-data "assets/*:assets" --name GiraffeCode src/main.py`)*
 
 3. Your standalone Linux binary will be ready in the `dist/` directory:
    ```bash
@@ -177,15 +178,17 @@ GiraffeCode/
 │   ├── executor.py     # Command execution engine, step debugger & speed controls
 │   ├── game_state.py   # Grid state, directional movement & collision detection
 │   ├── giraffe.py      # Player entity, smooth sub-pixel interpolation & walk animations
-│   ├── levels.py       # 200 verified solvable level definitions
+│   ├── levels.py       # 200 verified solvable levels with dynamic bilingual (EN/ES) names
 │   ├── editor.py       # Level editor with BFS mathematical solvability verification
 │   ├── sound.py        # Audio manager, mute toggle & procedural SFX playback engine
 │   ├── ui.py           # Buttons, visual code pills, highlighter & UI rendering
 │   ├── i18n.py         # Bilingual localization engine (English 🇬🇧 / Spanish 🇪🇸)
 │   ├── particles.py    # Visual particle engine (leaf munch, sparkles, dust, confetti)
 │   └── scripts/        # Asset generation & walk cycle utility scripts
-├── requirements.txt    # Python dependencies (pygame-ce, Pillow)
+├── requirements.txt    # Python dependencies (pygame-ce)
+├── GiraffeCode.spec    # Standalone PyInstaller build specification
 ├── .gitignore          # Git exclusion rules
+├── LICENSE             # MIT License
 └── README.md           # Project documentation
 ```
 
