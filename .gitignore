@@ -6,9 +6,10 @@ env/
 __pycache__/
 *.pyc
 
-# PyInstaller build folders
+# PyInstaller & Inno Setup build folders
 build/
 dist/
+installer_output/
 *.spec
 !GiraffeCode.spec
 

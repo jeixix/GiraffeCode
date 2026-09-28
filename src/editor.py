@@ -13,9 +13,27 @@ from src.sound import sound_manager
 from src.ui import Button, load_icon
 
 def get_base_data_dir():
-    """Returns directory where user data/saves should persist (binary dir if frozen, project root if dev)"""
+    r"""
+    Returns directory where user data/saves should persist.
+    - If portable/dev: saves in project or executable directory if writable.
+    - If installed in read-only location (e.g. C:\Program Files): saves in %APPDATA%\SavannaCode.
+    """
     if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
+        exe_dir = os.path.dirname(sys.executable)
+        test_file = os.path.join(exe_dir, ".perm_test")
+        try:
+            with open(test_file, "w") as f:
+                f.write("")
+            os.remove(test_file)
+            return exe_dir
+        except (OSError, PermissionError):
+            appdata = os.getenv("APPDATA") or os.getenv("LOCALAPPDATA") or os.path.expanduser("~")
+            savanna_dir = os.path.join(appdata, "SavannaCode")
+            try:
+                os.makedirs(savanna_dir, exist_ok=True)
+                return savanna_dir
+            except Exception:
+                return exe_dir
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def get_resource_path(relative_path):

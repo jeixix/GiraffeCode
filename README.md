@@ -178,13 +178,47 @@ You can compile the game into a single, standalone executable that bundles Pytho
 
 ---
 
+### 💿 Creating a Windows Setup Installer (`.exe`)
+
+You can package the game into a single setup wizard (`SavannaCode-Setup-v1.0.exe`) that includes:
+- Bilingual installation wizard (English 🇬🇧 & Spanish 🇪🇸).
+- Automatic Desktop and Start Menu shortcut creation with game icon.
+- Full uninstaller registered in Windows Settings / Control Panel (which completely purges all game files, settings, and saves upon removal).
+- Read-only protection: game data automatically saves to `%APPDATA%\SavannaCode` if installed into `Program Files`.
+
+#### Option A: Automatic Cloud Build (GitHub Actions — 100% Free)
+1. Go to your repository on GitHub and click the **Actions** tab.
+2. Select **Build Windows Installer** from the left sidebar.
+3. Click **Run workflow** -> **Run workflow**.
+4. Once completed (~2 minutes), download the ready-to-distribute `SavannaCode-Windows-Installer` artifact from the run summary!
+*(Pushing a version tag like `git tag v1.0.0 && git push origin v1.0.0` will automatically publish a GitHub Release with the installer attached).*
+
+#### Option B: Building Locally on Windows (Inno Setup)
+1. Install [Inno Setup 6](https://jrsoftware.org/isdl.php) (free & open source, or via `winget install JRSoftware.InnoSetup`).
+2. Build the PyInstaller executable first:
+   ```cmd
+   pyinstaller GiraffeCode.spec --noconfirm
+   ```
+3. Compile the installer:
+   - **Via Command Line**:
+     ```cmd
+     "C:\Program Files (x86)\Inno Setup 6\iscc.exe" installer.iss
+     ```
+   - **Or via GUI**: Right-click `installer.iss` in File Explorer and click **Compile**.
+4. Your setup wizard will be created in the `installer_output\` directory:
+   ```cmd
+   installer_output\SavannaCode-Setup-v1.0.exe
+   ```
+
+---
+
 ## 📂 Project Structure
 
 Following modern Python packaging standards, all execution logic resides cleanly within the `src/` module:
 
 ```text
 GiraffeCode/
-├── assets/             # Game graphics (PNG sprites, walk cycle frames & JPG backgrounds)
+├── assets/             # Game graphics (PNG sprites, walk cycle frames, JPG backgrounds & icon.ico)
 ├── src/
 │   ├── main.py         # Entry point and launcher script
 │   ├── game.py         # Main loop, menus, dynamic scaling & terrain generation
@@ -198,8 +232,11 @@ GiraffeCode/
 │   ├── i18n.py         # Bilingual localization engine (English 🇬🇧 / Spanish 🇪🇸)
 │   ├── particles.py    # Visual particle engine (leaf munch, sparkles, dust, confetti)
 │   └── scripts/        # Asset generation & walk cycle utility scripts
+├── .github/
+│   └── workflows/      # Automated GitHub Actions cloud CI/CD workflows
 ├── requirements.txt    # Python dependencies (pygame-ce)
 ├── GiraffeCode.spec    # Standalone PyInstaller build specification
+├── installer.iss       # Inno Setup Windows installer script (EN/ES)
 ├── .gitignore          # Git exclusion rules
 ├── LICENSE             # MIT License
 └── README.md           # Project documentation
