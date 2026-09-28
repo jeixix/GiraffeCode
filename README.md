@@ -136,7 +136,7 @@ You can compile the game into a single, standalone executable that bundles Pytho
    ```bash
    pyinstaller GiraffeCode.spec --noconfirm
    ```
-   *(Or alternatively build directly with custom flags: `pyinstaller -y --onefile --noconsole --icon=assets/icon.png --add-data "assets/*:assets" --name GiraffeCode src/main.py`)*
+   *(Or alternatively build directly with custom flags: `pyinstaller -y --onefile --noconsole --icon=assets/icon.ico --add-data "assets/*:assets" --name GiraffeCode src/main.py`)*
 
 3. Your standalone Linux binary will be ready in the `dist/` directory:
    ```bash
@@ -161,9 +161,13 @@ You can compile the game into a single, standalone executable that bundles Pytho
    pip install -r requirements.txt pyinstaller
    ```
 
-5. Run PyInstaller (note the semicolon `;` used to separate paths on Windows):
+5. Run PyInstaller using the included specification file:
    ```cmd
-   pyinstaller -y --onefile --noconsole --icon=assets/icon.png --add-data "assets/*;assets" --name GiraffeCode src/main.py
+   pyinstaller GiraffeCode.spec --noconfirm
+   ```
+   *(Or alternatively build directly with custom flags, noting the `.ico` icon and semicolon `;` path separator on Windows)*:
+   ```cmd
+   pyinstaller -y --onefile --noconsole --icon=assets\icon.ico --add-data "assets/*;assets" --name GiraffeCode src\main.py
    ```
 
 6. Your standalone Windows executable will be available at:

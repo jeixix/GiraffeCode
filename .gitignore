@@ -10,6 +10,7 @@ __pycache__/
 build/
 dist/
 *.spec
+!GiraffeCode.spec
 
 # Android Buildozer
 .buildozer/
