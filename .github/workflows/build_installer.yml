@@ -3,6 +3,9 @@ name: Build Windows Installer
 on:
   workflow_dispatch:
   push:
+    branches:
+      - test-new-features
+      - main
     tags:
       - 'v*'
 
