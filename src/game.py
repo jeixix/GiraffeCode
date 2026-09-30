@@ -268,9 +268,9 @@ def character_select_menu(screen, assets):
     card2_rect = pygame.Rect(420, 145, card_w, card_h)
     btn_lang = Button(screen.get_width() - 85, 20, 65, 36, get_lang(), (190, 225, 255), (220, 240, 255), "TOGGLE_LANG", font_size=24)
     btn1 = Button(card1_rect.x + 30, card1_rect.bottom - 65, card_w - 60, 48, 
-                  t("card_btn_giraffe"), (100, 230, 100), (160, 255, 160), "giraffe")
+                  t("card_btn_giraffe"), (100, 230, 100), (160, 255, 160), "giraffe", font_size=26)
     btn2 = Button(card2_rect.x + 30, card2_rect.bottom - 65, card_w - 60, 48, 
-                  t("card_btn_cheetah"), (255, 170, 50), (255, 210, 110), "cheetah")
+                  t("card_btn_cheetah"), (255, 170, 50), (255, 210, 110), "cheetah", font_size=26)
     preview_giraffe = pygame.transform.scale(assets["giraffe"], (110, 110)) if assets.get("giraffe") else None
     preview_tree = pygame.transform.scale(assets["tree"], (90, 90)) if assets.get("tree") else None
     preview_cheetah = pygame.transform.scale(assets["cheetah"], (110, 110)) if assets.get("cheetah") else None
@@ -412,12 +412,12 @@ def main_menu(screen, selected_char, assets, completed_levels):
     icon_editor = pygame.transform.scale(assets["emoji_editor"], (16, 16)) if assets.get("emoji_editor") else None
 
     # Header action buttons
-    fs_w = 95
-    lang_w = 48
-    mute_w = 110
-    hero_w = 130
-    cust_w = 125
-    ed_w = 115
+    fs_w = 100
+    lang_w = 52
+    mute_w = 115
+    hero_w = 145
+    cust_w = 130
+    ed_w = 125
     gap = 8
     top_y = 16
     btn_h = 36
@@ -430,11 +430,17 @@ def main_menu(screen, selected_char, assets, completed_levels):
     btn_editor = Button(0, top_y, ed_w, btn_h, t("level_editor"), (255, 185, 60), (255, 215, 110), "LEVEL_EDITOR", icon=icon_editor, icon_pos="right", font_size=20)
 
     def reposition_header_buttons(scr_w):
+        btn_fs.rect.width = fs_w
         btn_fs.rect.x = scr_w - 18 - fs_w
+        btn_lang.rect.width = lang_w
         btn_lang.rect.x = btn_fs.rect.left - gap - lang_w
+        btn_mute.rect.width = mute_w
         btn_mute.rect.x = btn_lang.rect.left - gap - mute_w
+        btn_change_hero.rect.width = hero_w
         btn_change_hero.rect.x = btn_mute.rect.left - gap - hero_w
+        btn_custom.rect.width = cust_w
         btn_custom.rect.x = btn_change_hero.rect.left - gap - cust_w
+        btn_editor.rect.width = ed_w
         btn_editor.rect.x = btn_custom.rect.left - gap - ed_w
 
     reposition_header_buttons(screen.get_width())
@@ -840,15 +846,15 @@ def main():
         executor = Executor(game_state, ui)
 
         # Dynamic layout: ensure bottom row and all borders are 100% visible above UI
-        header_height = 48
+        header_height = 76
         ui_top = LOGICAL_HEIGHT - UI_HEIGHT  # 618
-        pad_top = 16
-        pad_bottom = 16
+        pad_top = 10
+        pad_bottom = 12
         pad_x = 24
 
-        board_top = header_height + pad_top  # 64
-        board_bottom = ui_top - pad_bottom   # 602
-        avail_h = board_bottom - board_top   # 538
+        board_top = header_height + pad_top  # 86
+        board_bottom = ui_top - pad_bottom   # 606
+        avail_h = board_bottom - board_top   # 520
         avail_w = LOGICAL_WIDTH - 2 * pad_x  # 976
 
         max_w_tile = avail_w // level.width
@@ -883,7 +889,8 @@ def main():
 
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, 40)
-    small_font = pygame.font.Font(None, 34)
+    header_title_font = pygame.font.Font(None, 34)
+    header_sub_font = pygame.font.Font(None, 24)
     completed_levels = load_progress()
     # Level variables
     level = game_state = ui = executor = offset_x = offset_y = tile_size = level_assets = obstacle_types = ground_types = last_player_pos = None
@@ -1088,27 +1095,38 @@ def main():
 
             # Draw background
             screen.fill((135, 206, 235))
-            # Header info with real hero emoji image
-            lvl_name = level.get_title(current_level_idx, selected_character, get_lang(), include_prefix=True) if hasattr(level, "get_title") else getattr(level, "name", "")
-            part1 = small_font.render(f"{lvl_name}   |   ", True, (0, 0, 0))
+            # Header Row 1: Hero icon, Character name, and ESC hint (top left)
             hx = MARGIN
-            screen.blit(part1, (hx, 10))
-            hx += part1.get_width()
             hero_emoji_img = level_assets.get(f"emoji_{selected_character}")
             if hero_emoji_img:
-                h_icon = pygame.transform.scale(hero_emoji_img, (26, 26))
-                screen.blit(h_icon, (hx, 8))
-                hx += h_icon.get_width() + 6
+                h_icon = pygame.transform.scale(hero_emoji_img, (22, 22))
+                screen.blit(h_icon, (hx, 13))
+                hx += h_icon.get_width() + 8
             esc_target = t("level_editor") if playing_custom else t("menu")
             c_info = CHARACTERS[selected_character]
-            part2 = small_font.render(f"{c_info['name']}  (ESC: {esc_target})", True, (0, 0, 0))
-            screen.blit(part2, (hx, 10))
+            char_esc_text = f"{c_info['name']}   |   ESC: {esc_target}"
+            char_surf = header_sub_font.render(char_esc_text, True, (40, 50, 60))
+            screen.blit(char_surf, (hx, 16))
 
-            # Draw in-game header buttons
+            # Header Row 1: In-game control action buttons (top right)
             btn_ingame_mute.draw(screen, mouse_pos)
             btn_ingame_speed.draw(screen, mouse_pos)
             btn_ingame_lang.draw(screen, mouse_pos)
             btn_ingame_fs.draw(screen, mouse_pos)
+
+            # Header Row 2: Level Title prominently displayed on its own row below
+            lvl_name = level.get_title(current_level_idx, selected_character, get_lang(), include_prefix=True) if hasattr(level, "get_title") else getattr(level, "name", "")
+            avail_title_w = LOGICAL_WIDTH - 2 * MARGIN
+            if header_title_font.size(lvl_name)[0] > avail_title_w:
+                sz = 34
+                fit_f = header_title_font
+                while fit_f.size(lvl_name)[0] > avail_title_w and sz > 16:
+                    sz -= 1
+                    fit_f = pygame.font.Font(None, sz)
+                title_surf = fit_f.render(lvl_name, True, (15, 25, 35))
+            else:
+                title_surf = header_title_font.render(lvl_name, True, (15, 25, 35))
+            screen.blit(title_surf, (MARGIN, 45))
 
             # Grid with target sprite
             draw_grid(screen, level, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, target_sprite=char_info["target_sprite"])

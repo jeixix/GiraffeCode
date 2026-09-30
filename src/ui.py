@@ -17,26 +17,64 @@ def load_icon(name, size):
         pass
     return None
 
+_FONT_CACHE = {}
+
+def get_cached_font(size):
+    if size not in _FONT_CACHE:
+        _FONT_CACHE[size] = pygame.font.Font(None, size)
+    return _FONT_CACHE[size]
+
 class Button:
-    def __init__(self, x, y, width, height, text, color, hover_color, action, icon=None, icon_pos="right", font_size=32):
+    def __init__(self, x, y, width, height, text, color, hover_color, action, icon=None, icon_pos="right", font_size=24):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.color = color
         self.hover_color = hover_color
         self.action = action
-        self.font = pygame.font.Font(None, font_size)
+        self.base_font_size = font_size
         self.icon = icon
         self.icon_pos = icon_pos
+        self.font = get_cached_font(font_size)
+        self._cached_fitted_font = None
+        self._last_state = None
+
+    def _get_fitted_font(self):
+        state = (self.text, self.rect.width, self.rect.height, self.base_font_size, bool(self.icon))
+        if self._last_state == state and self._cached_fitted_font is not None:
+            return self._cached_fitted_font
+
+        icon_w = self.icon.get_width() if self.icon else 0
+        gap = 6 if (self.icon and self.text) else 0
+        # Allow at least 4px padding on each side and 3px on top/bottom
+        avail_w = max(10, self.rect.width - icon_w - gap - 8)
+        avail_h = max(10, self.rect.height - 6)
+
+        sz = self.base_font_size
+        f = get_cached_font(sz)
+        tw, th = f.size(self.text)
+        while (tw > avail_w or th > avail_h) and sz > 11:
+            sz -= 1
+            f = get_cached_font(sz)
+            tw, th = f.size(self.text)
+
+        self._cached_fitted_font = f
+        self._last_state = state
+        self.font = f
+        return f
         
     def draw(self, surface, mouse_pos):
         color = self.hover_color if self.rect.collidepoint(mouse_pos) else self.color
         pygame.draw.rect(surface, color, self.rect, border_radius=8)
         pygame.draw.rect(surface, (0, 0, 0), self.rect, 2, border_radius=8)
         
-        text_surf = self.font.render(self.text, True, (0, 0, 0))
+        font = self._get_fitted_font()
+        text_surf = font.render(self.text, True, (0, 0, 0))
+        
+        old_clip = surface.get_clip()
+        surface.set_clip(self.rect)
         if self.icon:
-            gap = 8
-            total_w = text_surf.get_width() + self.icon.get_width() + (gap if self.text else 0)
+            gap = 6 if self.text else 0
+            total_w = text_surf.get_width() + self.icon.get_width() + gap
             start_x = self.rect.centerx - total_w // 2
             if self.icon_pos == "left":
                 icon_rect = self.icon.get_rect(midleft=(start_x, self.rect.centery))
@@ -49,6 +87,7 @@ class Button:
         else:
             text_rect = text_surf.get_rect(center=self.rect.center)
             surface.blit(text_surf, text_rect)
+        surface.set_clip(old_clip)
         
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -65,20 +104,25 @@ class UI:
         
         btn_y = height - 64
         btn_h = 48
-        self.icon_undo = load_icon("emoji_undo.png", (22, 22))
-        self.icon_clear = load_icon("emoji_trash.png", (22, 22))
-        self.icon_run = load_icon("emoji_play.png", (20, 20))
-        self.icon_stop = load_icon("emoji_stop.png", (20, 20))
-        self.icon_repeat = load_icon("emoji_repeat.png", (22, 22))
+        btn_w = 94
+        btn_gap = 5
+        start_x = 12
+
+        self.icon_undo = load_icon("emoji_undo.png", (16, 16))
+        self.icon_clear = load_icon("emoji_trash.png", (16, 16))
+        self.icon_run = load_icon("emoji_play.png", (16, 16))
+        self.icon_stop = load_icon("emoji_stop.png", (16, 16))
+        self.icon_repeat = load_icon("emoji_repeat.png", (16, 16))
         
-        self.btn_fwd = Button(15, btn_y, 98, btn_h, t("cmd_forward"), (100, 255, 100), (150, 255, 150), "FORWARD", font_size=20)
-        self.btn_lft = Button(121, btn_y, 80, btn_h, t("cmd_left"), (100, 100, 255), (150, 150, 255), "LEFT", font_size=20)
-        self.btn_rgt = Button(209, btn_y, 80, btn_h, t("cmd_right"), (255, 100, 100), (255, 150, 150), "RIGHT", font_size=20)
-        self.btn_rep = Button(297, btn_y, 94, btn_h, t("cmd_repeat"), (220, 150, 255), (235, 180, 255), "REPEAT", icon=self.icon_repeat, font_size=20)
-        self.btn_undo = Button(399, btn_y, 86, btn_h, t("cmd_undo"), (255, 175, 75), (255, 200, 115), "UNDO", icon=self.icon_undo, font_size=20)
-        self.btn_clear = Button(493, btn_y, 82, btn_h, t("cmd_clear"), (210, 210, 210), (230, 230, 230), "CLEAR", icon=self.icon_clear, font_size=20)
-        self.btn_step = Button(583, btn_y, 82, btn_h, t("cmd_step"), (110, 200, 255), (155, 230, 255), "STEP", font_size=20)
-        self.btn_run = Button(673, btn_y, 94, btn_h, t("cmd_run"), (255, 200, 0), (255, 230, 100), "RUN", icon=self.icon_run, font_size=20)
+        # All 8 command buttons with identical uniform size (94x48)
+        self.btn_fwd = Button(start_x + 0 * (btn_w + btn_gap), btn_y, btn_w, btn_h, t("cmd_forward"), (100, 255, 100), (150, 255, 150), "FORWARD", font_size=18)
+        self.btn_lft = Button(start_x + 1 * (btn_w + btn_gap), btn_y, btn_w, btn_h, t("cmd_left"), (100, 100, 255), (150, 150, 255), "LEFT", font_size=18)
+        self.btn_rgt = Button(start_x + 2 * (btn_w + btn_gap), btn_y, btn_w, btn_h, t("cmd_right"), (255, 100, 100), (255, 150, 150), "RIGHT", font_size=18)
+        self.btn_rep = Button(start_x + 3 * (btn_w + btn_gap), btn_y, btn_w, btn_h, t("cmd_repeat"), (220, 150, 255), (235, 180, 255), "REPEAT", icon=self.icon_repeat, font_size=18)
+        self.btn_undo = Button(start_x + 4 * (btn_w + btn_gap), btn_y, btn_w, btn_h, t("cmd_undo"), (255, 175, 75), (255, 200, 115), "UNDO", icon=self.icon_undo, font_size=18)
+        self.btn_clear = Button(start_x + 5 * (btn_w + btn_gap), btn_y, btn_w, btn_h, t("cmd_clear"), (210, 210, 210), (230, 230, 230), "CLEAR", icon=self.icon_clear, font_size=18)
+        self.btn_step = Button(start_x + 6 * (btn_w + btn_gap), btn_y, btn_w, btn_h, t("cmd_step"), (110, 200, 255), (155, 230, 255), "STEP", font_size=18)
+        self.btn_run = Button(start_x + 7 * (btn_w + btn_gap), btn_y, btn_w, btn_h, t("cmd_run"), (255, 200, 0), (255, 230, 100), "RUN", icon=self.icon_run, font_size=18)
         
         self.buttons = [
             self.btn_fwd,
@@ -90,7 +134,7 @@ class UI:
             self.btn_step,
             self.btn_run
         ]
-        self.hint_font = pygame.font.Font(None, 18)
+        self.hint_font = pygame.font.Font(None, 16)
         self.font = pygame.font.Font(None, 20)
         self.arrow_font = pygame.font.Font(None, 20)
         self.empty_font = pygame.font.Font(None, 22)
@@ -162,7 +206,7 @@ class UI:
         for idx, line in enumerate(hint_lines):
             color = (80, 80, 80) if idx == 0 else (120, 120, 120)
             hint_surf = self.hint_font.render(line, True, color)
-            surface.blit(hint_surf, (778, self.height - 105 + idx * 16))
+            surface.blit(hint_surf, (808, self.height - 105 + idx * 16))
             
         # Draw program queue pills
         short_names = {

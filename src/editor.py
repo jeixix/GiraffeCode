@@ -217,41 +217,41 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         toast_expiry = pygame.time.get_ticks() + duration_ms
 
     # Setup Buttons
-    btn_menu = Button(20, 15, 140, 40, "Back to Menu", (220, 220, 220), (240, 240, 240), "MENU")
+    btn_menu = Button(20, 15, 140, 40, "Back to Menu", (220, 220, 220), (240, 240, 240), "MENU", font_size=22)
     btn_fs = Button(screen.get_width() - 170, 15, 150, 40,
                     "Windowed" if is_fullscreen_getter() else "Fullscreen",
-                    (100, 150, 255), (150, 200, 255), "TOGGLE_FS")
+                    (100, 150, 255), (150, 200, 255), "TOGGLE_FS", font_size=22)
 
     # Tool selection buttons
     tool_buttons = [
-        Button(20, 140, 150, 46, "Hero Start", (255, 235, 140), (255, 245, 180), "TOOL_START"),
-        Button(20, 195, 150, 46, "Goal Target", (140, 240, 140), (180, 255, 180), "TOOL_GOAL"),
-        Button(20, 250, 150, 46, "Rock Obstacle", (210, 210, 210), (230, 230, 230), "TOOL_ROCK"),
-        Button(20, 305, 150, 46, "Water Hazard", (160, 210, 255), (190, 230, 255), "TOOL_WATER"),
-        Button(20, 360, 150, 46, "Eraser", (255, 190, 190), (255, 215, 215), "TOOL_ERASE"),
+        Button(20, 140, 150, 46, "Hero Start", (255, 235, 140), (255, 245, 180), "TOOL_START", font_size=22),
+        Button(20, 195, 150, 46, "Goal Target", (140, 240, 140), (180, 255, 180), "TOOL_GOAL", font_size=22),
+        Button(20, 250, 150, 46, "Rock Obstacle", (210, 210, 210), (230, 230, 230), "TOOL_ROCK", font_size=22),
+        Button(20, 305, 150, 46, "Water Hazard", (160, 210, 255), (190, 230, 255), "TOOL_WATER", font_size=22),
+        Button(20, 360, 150, 46, "Eraser", (255, 190, 190), (255, 215, 215), "TOOL_ERASE", font_size=22),
     ]
 
     # Grid size controls
-    btn_w_minus = Button(20, 435, 36, 36, "-", (200, 200, 200), (220, 220, 220), "W_MINUS")
-    btn_w_plus = Button(134, 435, 36, 36, "+", (200, 200, 200), (220, 220, 220), "W_PLUS")
-    btn_h_minus = Button(20, 480, 36, 36, "-", (200, 200, 200), (220, 220, 220), "H_MINUS")
-    btn_h_plus = Button(134, 480, 36, 36, "+", (200, 200, 200), (220, 220, 220), "H_PLUS")
+    btn_w_minus = Button(20, 435, 36, 36, "-", (200, 200, 200), (220, 220, 220), "W_MINUS", font_size=22)
+    btn_w_plus = Button(134, 435, 36, 36, "+", (200, 200, 200), (220, 220, 220), "W_PLUS", font_size=22)
+    btn_h_minus = Button(20, 480, 36, 36, "-", (200, 200, 200), (220, 220, 220), "H_MINUS", font_size=22)
+    btn_h_plus = Button(134, 480, 36, 36, "+", (200, 200, 200), (220, 220, 220), "H_PLUS", font_size=22)
 
     # Level Management Buttons
-    btn_prev = Button(20, 545, 45, 36, "<", (210, 210, 210), (230, 230, 230), "PREV_LEVEL")
-    btn_next = Button(125, 545, 45, 36, ">", (210, 210, 210), (230, 230, 230), "NEXT_LEVEL")
-    btn_new = Button(20, 590, 150, 38, "+ New Level", (255, 220, 130), (255, 235, 170), "NEW_LEVEL")
-    btn_clear = Button(20, 636, 150, 38, "Clear Grid", (230, 230, 230), (245, 245, 245), "CLEAR_GRID")
-    btn_del = Button(20, 682, 150, 38, "Delete Level", (255, 160, 160), (255, 190, 190), "DEL_LEVEL")
+    btn_prev = Button(20, 545, 45, 36, "<", (210, 210, 210), (230, 230, 230), "PREV_LEVEL", font_size=22)
+    btn_next = Button(125, 545, 45, 36, ">", (210, 210, 210), (230, 230, 230), "NEXT_LEVEL", font_size=22)
+    btn_new = Button(20, 590, 150, 38, "+ New Level", (255, 220, 130), (255, 235, 170), "NEW_LEVEL", font_size=22)
+    btn_clear = Button(20, 636, 150, 38, "Clear Grid", (230, 230, 230), (245, 245, 245), "CLEAR_GRID", font_size=22)
+    btn_del = Button(20, 682, 150, 38, "Delete Level", (255, 160, 160), (255, 190, 190), "DEL_LEVEL", font_size=22)
 
     icon_play = pygame.transform.scale(assets["emoji_play"], (22, 22)) if assets.get("emoji_play") else None
     icon_save = pygame.transform.scale(assets["emoji_save"], (22, 22)) if assets.get("emoji_save") else None
 
     # Center Action Buttons (bottom bar)
     btn_test_play = Button(screen.get_width() // 2 - 210, screen.get_height() - 75, 200, 55,
-                           "Test & Play", (100, 230, 100), (140, 255, 140), "TEST_PLAY", icon=icon_play, icon_pos="right")
+                           "Test & Play", (100, 230, 100), (140, 255, 140), "TEST_PLAY", icon=icon_play, icon_pos="right", font_size=24)
     btn_save = Button(screen.get_width() // 2 + 10, screen.get_height() - 75, 190, 55,
-                      "Save Level", (255, 200, 80), (255, 220, 120), "SAVE_LEVEL", icon=icon_save, icon_pos="right")
+                      "Save Level", (255, 200, 80), (255, 220, 120), "SAVE_LEVEL", icon=icon_save, icon_pos="right", font_size=24)
 
     all_ui_buttons = tool_buttons + [
         btn_menu, btn_fs,
