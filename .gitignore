@@ -37,3 +37,9 @@ progress.json
 settings.json
 custom_levels.json
 
+# Agent skills & local documentation
+AGENTS.md
+docs/
+.scratch/
+
+
