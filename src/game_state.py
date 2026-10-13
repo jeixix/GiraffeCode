@@ -9,6 +9,7 @@ class GameState:
         self.giraffe = Giraffe(self.level.start_x, self.level.start_y, self.level.start_dir)
         self.state = "IDLE"  # IDLE, RUNNING, SUCCESS, CRASH
         self.obstacle_set = set(tuple(o) for o in (self.level.obstacles or []))
+        self.crash_pos = None
         
     def is_valid_pos(self, x, y):
         if x < 0 or x >= self.level.width:
@@ -32,6 +33,7 @@ class GameState:
                 self.giraffe.move_forward()
             else:
                 self.state = "CRASH"
+                self.crash_pos = (sim_x, sim_y)
         elif command == "LEFT":
             self.giraffe.turn_left()
         elif command == "RIGHT":

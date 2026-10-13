@@ -88,11 +88,12 @@ class Executor:
                 self.command_index += 1
         else:
             self.game_state.update_giraffe(cmd)
-            if cmd == "FORWARD":
-                sound_manager.play_step()
-            elif cmd in ["LEFT", "RIGHT"]:
-                sound_manager.play_turn()
-            self.command_index += 1
+            if self.game_state.state != "CRASH":
+                if cmd == "FORWARD":
+                    sound_manager.play_step()
+                elif cmd in ["LEFT", "RIGHT"]:
+                    sound_manager.play_turn()
+                self.command_index += 1
 
     def update(self):
         if self.is_running:
@@ -103,7 +104,8 @@ class Executor:
                     self.last_step_time = current_time
                 else:
                     self.is_running = False
-                    self.command_index = -1
                     self.ui.set_running(False)
+                    if self.game_state.state != "CRASH":
+                        self.command_index = -1
                     if self.game_state.state == "RUNNING":
                         self.game_state.state = "IDLE"

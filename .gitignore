@@ -39,6 +39,7 @@ custom_levels.json
 
 # Agent skills & local documentation
 AGENTS.md
+GLOSSARY.md
 docs/
 .scratch/
 

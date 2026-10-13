@@ -201,14 +201,15 @@ class UI:
             t("hint_turn"),
             t("hint_step"),
             t("hint_rep"),
+            t("hint_speed"),
             t("hint_fs")
         ]
         for idx, line in enumerate(hint_lines):
             color = (80, 80, 80) if idx == 0 else (120, 120, 120)
             hint_surf = self.hint_font.render(line, True, color)
-            surface.blit(hint_surf, (808, self.height - 105 + idx * 16))
+            surface.blit(hint_surf, (808, self.height - 114 + idx * 15))
             
-        # Draw program queue pills
+        # Draw program queue pills (contained strictly within 2 rows above buttons)
         short_names = {
             "FORWARD": t("pill_forward"),
             "LEFT": t("pill_left"),
@@ -220,13 +221,29 @@ class UI:
             text_surf = self.empty_font.render(t("empty_queue_hint"), True, (110, 110, 110))
             surface.blit(text_surf, (20, self.height - 138))
         else:
+            old_clip = surface.get_clip()
+            pill_area = pygame.Rect(10, self.height - 146, 792, 76)
+            surface.set_clip(pill_area)
+
+            # Determine visible window if commands are numerous
+            start_idx = 0
+            if active_cmd_idx is not None and active_cmd_idx > 16:
+                start_idx = max(0, active_cmd_idx - 10)
+
             cur_x = 20
             cur_y = self.height - 142
             pill_h = 20
             row_spacing = 24
-            max_w = self.width - 25
-            
-            for i, cmd in enumerate(self.commands):
+            max_w = 790
+            max_y = self.height - 94  # Max 2 rows (row 0: -142, row 1: -118)
+
+            if start_idx > 0:
+                more_prev = self.font.render("...", True, (100, 100, 100))
+                surface.blit(more_prev, (cur_x, cur_y + 2))
+                cur_x += more_prev.get_width() + 8
+
+            for i in range(start_idx, len(self.commands)):
+                cmd = self.commands[i]
                 label = short_names.get(cmd, cmd)
                 text_w, text_h = self.font.size(label)
                 pill_w = text_w + 12
@@ -234,6 +251,12 @@ class UI:
                 needed = pill_w + (arrow_w if i < len(self.commands) - 1 else 0)
                 
                 if cur_x + needed > max_w:
+                    if cur_y + row_spacing > max_y:
+                        # Cannot fit another row without overlapping buttons; draw +N remaining
+                        rem = len(self.commands) - i
+                        rem_txt = self.font.render(f"+{rem}", True, (100, 100, 100))
+                        surface.blit(rem_txt, (min(cur_x, max_w - 35), cur_y + 2))
+                        break
                     cur_x = 20
                     cur_y += row_spacing
                     
@@ -271,6 +294,8 @@ class UI:
                     pts = [(arr_x - 3, arr_y - 4), (arr_x + 3, arr_y), (arr_x - 3, arr_y + 4)]
                     pygame.draw.polygon(surface, (140, 140, 140), pts)
                     cur_x += arrow_w
+                    
+            surface.set_clip(old_clip)
                     
         self.draw_tutorial_hints(surface, tutorial_level)
         

@@ -11,6 +11,7 @@ import pygame
 from src.levels import Level
 from src.sound import sound_manager
 from src.ui import Button, load_icon
+from src.i18n import t
 
 def get_base_data_dir():
     r"""
@@ -217,18 +218,18 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         toast_expiry = pygame.time.get_ticks() + duration_ms
 
     # Setup Buttons
-    btn_menu = Button(20, 15, 140, 40, "Back to Menu", (220, 220, 220), (240, 240, 240), "MENU", font_size=22)
+    btn_menu = Button(20, 15, 140, 40, t("ed_back"), (220, 220, 220), (240, 240, 240), "MENU", font_size=20)
     btn_fs = Button(screen.get_width() - 170, 15, 150, 40,
-                    "Windowed" if is_fullscreen_getter() else "Fullscreen",
-                    (100, 150, 255), (150, 200, 255), "TOGGLE_FS", font_size=22)
+                    t("windowed") if is_fullscreen_getter() else t("fullscreen"),
+                    (100, 150, 255), (150, 200, 255), "TOGGLE_FS", font_size=20)
 
     # Tool selection buttons
     tool_buttons = [
-        Button(20, 140, 150, 46, "Hero Start", (255, 235, 140), (255, 245, 180), "TOOL_START", font_size=22),
-        Button(20, 195, 150, 46, "Goal Target", (140, 240, 140), (180, 255, 180), "TOOL_GOAL", font_size=22),
-        Button(20, 250, 150, 46, "Rock Obstacle", (210, 210, 210), (230, 230, 230), "TOOL_ROCK", font_size=22),
-        Button(20, 305, 150, 46, "Water Hazard", (160, 210, 255), (190, 230, 255), "TOOL_WATER", font_size=22),
-        Button(20, 360, 150, 46, "Eraser", (255, 190, 190), (255, 215, 215), "TOOL_ERASE", font_size=22),
+        Button(20, 140, 150, 46, t("ed_hero_start"), (255, 235, 140), (255, 245, 180), "TOOL_START", font_size=20),
+        Button(20, 195, 150, 46, t("ed_goal_target"), (140, 240, 140), (180, 255, 180), "TOOL_GOAL", font_size=20),
+        Button(20, 250, 150, 46, t("ed_rock"), (210, 210, 210), (230, 230, 230), "TOOL_ROCK", font_size=20),
+        Button(20, 305, 150, 46, t("ed_water"), (160, 210, 255), (190, 230, 255), "TOOL_WATER", font_size=20),
+        Button(20, 360, 150, 46, t("ed_eraser"), (255, 190, 190), (255, 215, 215), "TOOL_ERASE", font_size=20),
     ]
 
     # Grid size controls
@@ -240,18 +241,18 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
     # Level Management Buttons
     btn_prev = Button(20, 545, 45, 36, "<", (210, 210, 210), (230, 230, 230), "PREV_LEVEL", font_size=22)
     btn_next = Button(125, 545, 45, 36, ">", (210, 210, 210), (230, 230, 230), "NEXT_LEVEL", font_size=22)
-    btn_new = Button(20, 590, 150, 38, "+ New Level", (255, 220, 130), (255, 235, 170), "NEW_LEVEL", font_size=22)
-    btn_clear = Button(20, 636, 150, 38, "Clear Grid", (230, 230, 230), (245, 245, 245), "CLEAR_GRID", font_size=22)
-    btn_del = Button(20, 682, 150, 38, "Delete Level", (255, 160, 160), (255, 190, 190), "DEL_LEVEL", font_size=22)
+    btn_new = Button(20, 590, 150, 38, t("ed_new_level"), (255, 220, 130), (255, 235, 170), "NEW_LEVEL", font_size=20)
+    btn_clear = Button(20, 636, 150, 38, t("ed_clear_grid"), (230, 230, 230), (245, 245, 245), "CLEAR_GRID", font_size=20)
+    btn_del = Button(20, 682, 150, 38, t("ed_delete_lvl"), (255, 160, 160), (255, 190, 190), "DEL_LEVEL", font_size=20)
 
     icon_play = pygame.transform.scale(assets["emoji_play"], (22, 22)) if assets.get("emoji_play") else None
     icon_save = pygame.transform.scale(assets["emoji_save"], (22, 22)) if assets.get("emoji_save") else None
 
     # Center Action Buttons (bottom bar)
     btn_test_play = Button(screen.get_width() // 2 - 210, screen.get_height() - 75, 200, 55,
-                           "Test & Play", (100, 230, 100), (140, 255, 140), "TEST_PLAY", icon=icon_play, icon_pos="right", font_size=24)
+                           t("ed_test_play"), (100, 230, 100), (140, 255, 140), "TEST_PLAY", icon=icon_play, icon_pos="right", font_size=22)
     btn_save = Button(screen.get_width() // 2 + 10, screen.get_height() - 75, 190, 55,
-                      "Save Level", (255, 200, 80), (255, 220, 120), "SAVE_LEVEL", icon=icon_save, icon_pos="right", font_size=24)
+                      t("ed_save_level"), (255, 200, 80), (255, 220, 120), "SAVE_LEVEL", icon=icon_save, icon_pos="right", font_size=22)
 
     all_ui_buttons = tool_buttons + [
         btn_menu, btn_fs,
@@ -261,6 +262,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
     ]
 
     mouse_down = False
+    last_drag_cell = None
     hero_char_key = "giraffe" if selected_char == "giraffe" else "cheetah"
     target_char_key = "tree" if selected_char == "giraffe" else "gazelle"
     cached_scaled_tiles = {}
@@ -349,17 +351,23 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                     bg_image = pygame.transform.scale(raw_bg, screen.get_size())
                 menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                 menu_overlay.fill((255, 255, 255, 140))
-                btn_fs.text = "Windowed" if is_fullscreen_getter() else "Fullscreen"
+                btn_fs.text = t("windowed") if is_fullscreen_getter() else t("fullscreen")
                 btn_fs.rect.x = screen.get_width() - 170
                 btn_test_play.rect.x = screen.get_width() // 2 - 210
+                btn_test_play.rect.y = screen.get_height() - 75
                 btn_save.rect.x = screen.get_width() // 2 + 10
+                btn_save.rect.y = screen.get_height() - 75
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1: # Left click
-                    mouse_down = True
                     cell = screen_to_cell(event.pos)
                     if cell:
+                        mouse_down = True
+                        last_drag_cell = cell
                         apply_tool(cell[0], cell[1])
+                    else:
+                        mouse_down = False
+                        last_drag_cell = None
                 elif event.button == 3: # Right click -> Quick eraser!
                     cell = screen_to_cell(event.pos)
                     if cell:
@@ -371,11 +379,13 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     mouse_down = False
+                    last_drag_cell = None
 
             elif event.type == pygame.MOUSEMOTION:
                 if mouse_down and current_tool in ("ROCK", "WATER", "ERASE"):
                     cell = screen_to_cell(event.pos)
-                    if cell:
+                    if cell and cell != last_drag_cell:
+                        last_drag_cell = cell
                         apply_tool(cell[0], cell[1])
 
             # UI Button handling
@@ -416,24 +426,34 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                     current_tool = "ERASE"
                     sound_manager.play_click()
 
-                elif act == "W_MINUS":
-                    if state["width"] > 4:
+                elif act in ("W_MINUS", "H_MINUS"):
+                    if act == "W_MINUS" and state["width"] > 4:
                         state["width"] -= 1
-                        # clamp start, goal, and obstacles
-                        state["start_x"] = min(state["start_x"], state["width"] - 1)
-                        state["goal_x"] = min(state["goal_x"], state["width"] - 1)
-                        state["obstacles"] = [o for o in state["obstacles"] if o[0] < state["width"]]
-                        sound_manager.play_click()
+                    elif act == "H_MINUS" and state["height"] > 4:
+                        state["height"] -= 1
+                    else:
+                        continue
+
+                    # Clamp start and goal within new dimensions
+                    state["start_x"] = min(state["start_x"], state["width"] - 1)
+                    state["start_y"] = min(state["start_y"], state["height"] - 1)
+                    state["goal_x"] = min(state["goal_x"], state["width"] - 1)
+                    state["goal_y"] = min(state["goal_y"], state["height"] - 1)
+                    if (state["start_x"], state["start_y"]) == (state["goal_x"], state["goal_y"]):
+                        state["goal_x"] = max(0, min(state["width"] - 1, state["start_x"] + (1 if state["start_x"] < state["width"] - 1 else -1)))
+
+                    # Prune obstacles and obstacle_types outside new bounds
+                    state["obstacles"] = [o for o in state["obstacles"] if o[0] < state["width"] and o[1] < state["height"]]
+                    state["obstacle_types"] = {k: v for k, v in state.get("obstacle_types", {}).items() if int(k.split(",")[0]) < state["width"] and int(k.split(",")[1]) < state["height"]}
+                    start_pos = (state["start_x"], state["start_y"])
+                    goal_pos = (state["goal_x"], state["goal_y"])
+                    state["obstacles"] = [o for o in state["obstacles"] if tuple(o) not in (start_pos, goal_pos)]
+                    state["obstacle_types"].pop(f"{start_pos[0]},{start_pos[1]}", None)
+                    state["obstacle_types"].pop(f"{goal_pos[0]},{goal_pos[1]}", None)
+                    sound_manager.play_click()
                 elif act == "W_PLUS":
                     if state["width"] < 10:
                         state["width"] += 1
-                        sound_manager.play_click()
-                elif act == "H_MINUS":
-                    if state["height"] > 4:
-                        state["height"] -= 1
-                        state["start_y"] = min(state["start_y"], state["height"] - 1)
-                        state["goal_y"] = min(state["goal_y"], state["height"] - 1)
-                        state["obstacles"] = [o for o in state["obstacles"] if o[1] < state["height"]]
                         sound_manager.play_click()
                 elif act == "H_PLUS":
                     if state["height"] < 10:
@@ -478,7 +498,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         else:
                             current_level_idx = -1
                             state = get_default_level_state(0)
-                        show_toast("Deleted custom level.")
+                        show_toast(t("ed_deleted_ok"))
 
                 elif act in ("SAVE_LEVEL", "TEST_PLAY"):
                     # MANDATORY SOLVABILITY CHECK!
@@ -492,7 +512,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                     if not solvable:
                         # PLAY CANNOT PROCEED IF UNSOLVABLE!
                         sound_manager.play_error()
-                        show_toast(f"Cannot Play: {message}", is_error=True, duration_ms=5500)
+                        show_toast(t("ed_unsolvable"), is_error=True, duration_ms=5500)
                     else:
                         # SAVE LEVEL AND PERMIT PLAY
                         sound_manager.play_win()
@@ -506,7 +526,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         save_custom_levels(saved_levels)
 
                         if act == "SAVE_LEVEL":
-                            show_toast(f"Saved '{state['name']}'! {message}")
+                            show_toast(t("ed_saved_ok"))
                         else:
                             # Launch custom level directly in gameplay!
                             lvl_obj = custom_dict_to_level(level_dict)
@@ -528,15 +548,15 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         if assets.get("emoji_editor"):
             ed_icon = pygame.transform.scale(assets["emoji_editor"], (30, 30))
             screen.blit(ed_icon, (180, 20))
-            title = font_title.render("Level Editor", True, (0, 100, 0))
+            title = font_title.render(t("level_editor"), True, (0, 100, 0))
             screen.blit(title, (218, 16))
         else:
-            title = font_title.render("Level Editor", True, (0, 100, 0))
+            title = font_title.render(t("level_editor"), True, (0, 100, 0))
             screen.blit(title, (180, 16))
 
         # Level name badge in header
         level_display_name = state.get("name", "Custom Level")
-        lvl_lbl = font_ui_bold.render(f"Editing: {level_display_name}", True, (50, 50, 50))
+        lvl_lbl = font_ui_bold.render(t("ed_editing").format(name=level_display_name), True, (50, 50, 50))
         screen.blit(lvl_lbl, (460, 24))
 
         # Left Sidebar Panel
@@ -546,13 +566,13 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         screen.blit(sidebar, (0, 70))
 
         # Section Labels
-        s_tool = font_ui_bold.render("1. Tools", True, (60, 60, 60))
+        s_tool = font_ui_bold.render(t("ed_tools"), True, (60, 60, 60))
         screen.blit(s_tool, (20, 110))
 
-        s_size = font_ui_bold.render("2. Grid Size", True, (60, 60, 60))
+        s_size = font_ui_bold.render(t("ed_grid_size"), True, (60, 60, 60))
         screen.blit(s_size, (20, 410))
 
-        s_mgm = font_ui_bold.render("3. Levels", True, (60, 60, 60))
+        s_mgm = font_ui_bold.render(t("ed_levels"), True, (60, 60, 60))
         screen.blit(s_mgm, (20, 520))
 
         # Width and Height values
@@ -562,7 +582,10 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         screen.blit(h_lbl, (68, 489))
 
         # Level index indicator
-        idx_txt = f"{current_level_idx + 1}/{len(saved_levels)}" if saved_levels else "Draft"
+        if not saved_levels or current_level_idx >= len(saved_levels) or current_level_idx < 0:
+            idx_txt = t("ed_new_draft")
+        else:
+            idx_txt = f"{current_level_idx + 1}/{len(saved_levels)}"
         idx_lbl = font_ui.render(idx_txt, True, (40, 40, 40))
         screen.blit(idx_lbl, (75, 554))
 

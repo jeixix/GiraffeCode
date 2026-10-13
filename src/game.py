@@ -457,6 +457,8 @@ def main_menu(screen, selected_char, assets, completed_levels):
     btn_next = Button(screen.get_width() - 150, 150, 100, 36, t("next_chapter"), (200, 225, 255), (225, 240, 255), "NEXT_CHAP", font_size=22)
 
     def refresh_menu_texts():
+        nonlocal char_info
+        char_info = CHARACTERS[selected_char]
         btn_fs.text = t("windowed") if IS_FULLSCREEN else t("fullscreen")
         btn_lang.text = get_lang()
         btn_mute.text = t("sound_off") if sound_manager.is_muted else t("sound_on")
@@ -645,8 +647,11 @@ def main_menu(screen, selected_char, assets, completed_levels):
         screen.blit(title_surf, (chap_rect.x + 10, chap_rect.y + 9))
         if star_icon:
             screen.blit(star_icon, (chap_rect.x + 10 + title_surf.get_width() + 4, chap_rect.y + 7))
-            close_paren = font_chap_title.render(")", True, (0, 80, 0))
-            screen.blit(close_paren, (chap_rect.x + 10 + title_surf.get_width() + 4 + star_icon.get_width(), chap_rect.y + 9))
+            close_x = chap_rect.x + 10 + title_surf.get_width() + 4 + star_icon.get_width()
+        else:
+            close_x = chap_rect.x + 10 + title_surf.get_width() + 2
+        close_paren = font_chap_title.render(")", True, (0, 80, 0))
+        screen.blit(close_paren, (close_x, chap_rect.y + 9))
 
         # Level Grid (5 columns x 4 rows)
         grid_start_x = (screen.get_width() - (5 * 172 + 4 * 16)) // 2
@@ -806,17 +811,20 @@ def main():
     level = None
 
     # In-game top header action buttons
-    btn_ingame_fs = Button(LOGICAL_WIDTH - 65, 8, 50, 32, "Win" if IS_FULLSCREEN else "Full", (110, 160, 255), (160, 205, 255), "TOGGLE_FS", font_size=18)
+    btn_ingame_fs = Button(LOGICAL_WIDTH - 65, 8, 50, 32, t("btn_fs_windowed") if IS_FULLSCREEN else t("btn_fs_fullscreen"), (110, 160, 255), (160, 205, 255), "TOGGLE_FS", font_size=18)
     btn_ingame_lang = Button(LOGICAL_WIDTH - 120, 8, 48, 32, get_lang(), (190, 225, 255), (220, 240, 255), "TOGGLE_LANG", font_size=18)
     btn_ingame_speed = Button(LOGICAL_WIDTH - 215, 8, 88, 32, "1x Normal", (255, 230, 140), (255, 245, 175), "SPEED", font_size=18)
     btn_ingame_mute = Button(LOGICAL_WIDTH - 325, 8, 102, 32, t("sound_off") if sound_manager.is_muted else t("sound_on"), (255, 180, 180) if sound_manager.is_muted else (210, 240, 210), (255, 205, 205) if sound_manager.is_muted else (230, 250, 230), "MUTE", font_size=18)
+    btn_ingame_back = Button(MARGIN, 8, 120, 32, f"ESC: {t('menu')}", (235, 240, 245), (255, 225, 175), "BACK_MENU", font_size=18)
 
     def refresh_ingame_headers():
-        btn_ingame_fs.text = "Win" if IS_FULLSCREEN else "Full"
+        btn_ingame_fs.text = t("btn_fs_windowed") if IS_FULLSCREEN else t("btn_fs_fullscreen")
         btn_ingame_lang.text = get_lang()
         btn_ingame_speed.text = f"1x {t('speed_normal')}" if (executor and executor.speed_mode == "NORMAL") else f"2x {t('speed_fast')}"
         btn_ingame_mute.text = t("sound_off") if sound_manager.is_muted else t("sound_on")
         btn_ingame_mute.color = (255, 180, 180) if sound_manager.is_muted else (210, 240, 210)
+        esc_target = t("level_editor") if playing_custom else t("menu")
+        btn_ingame_back.text = f"ESC: {esc_target}"
         if level:
             c_info = CHARACTERS[selected_character]
             lvl_title = level.get_title(current_level_idx, selected_character, get_lang(), include_prefix=True) if hasattr(level, 'get_title') else getattr(level, 'name', '')
@@ -867,14 +875,15 @@ def main():
         offset_x = (LOGICAL_WIDTH - grid_w) // 2
         offset_y = board_top + (avail_h - grid_h) // 2
 
-        if playing_custom and getattr(level, 'obstacle_types', None):
+        if playing_custom:
             obstacle_types = {}
-            for k, v in level.obstacle_types.items():
-                if isinstance(k, str) and "," in k:
-                    parts = k.split(",")
-                    obstacle_types[(int(parts[0]), int(parts[1]))] = v
-                elif isinstance(k, tuple):
-                    obstacle_types[k] = v
+            if getattr(level, 'obstacle_types', None):
+                for k, v in level.obstacle_types.items():
+                    if isinstance(k, str) and "," in k:
+                        parts = k.split(",")
+                        obstacle_types[(int(parts[0]), int(parts[1]))] = v
+                    elif isinstance(k, tuple):
+                        obstacle_types[k] = v
             for o in level.obstacles:
                 if tuple(o) not in obstacle_types:
                     obstacle_types[tuple(o)] = "rock"
@@ -891,6 +900,11 @@ def main():
     font = pygame.font.Font(None, 40)
     header_title_font = pygame.font.Font(None, 34)
     header_sub_font = pygame.font.Font(None, 24)
+    font_sub_prompt = pygame.font.Font(None, 28)
+    success_overlay = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
+    success_overlay.fill((0, 255, 0, 50))
+    crash_overlay = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
+    crash_overlay.fill((255, 0, 0, 50))
     completed_levels = load_progress()
     # Level variables
     level = game_state = ui = executor = offset_x = offset_y = tile_size = level_assets = obstacle_types = ground_types = last_player_pos = None
@@ -966,6 +980,12 @@ def main():
                 if btn_ingame_mute.handle_event(event):
                     sound_manager.toggle_mute()
                     refresh_ingame_headers()
+                if btn_ingame_back.handle_event(event):
+                    particles.clear()
+                    state = "EDITOR" if playing_custom else "MENU"
+                    last_game_state = "IDLE"
+                    transitioned = True
+                    break
 
                 # UI bottom bar button actions
                 action = ui.handle_event(event)
@@ -1044,7 +1064,6 @@ def main():
                     elif event.key == pygame.K_SPACE and game_state.state == "CRASH":
                         particles.clear()
                         game_state.reset()
-                        ui.clear_commands()
                         last_game_state = "IDLE"
                     elif event.key == pygame.K_ESCAPE:
                         particles.clear()
@@ -1079,9 +1098,10 @@ def main():
                     particles.add_win_confetti(LOGICAL_WIDTH, LOGICAL_HEIGHT, 50)
                 elif game_state.state == "CRASH":
                     sound_manager.play_crash()
-                    c_px = offset_x + gx * tile_size + tile_size // 2
-                    c_py = offset_y + gy * tile_size + tile_size // 2
-                    obs_t = obstacle_types.get((gx, gy), "rock")
+                    cx, cy = getattr(game_state, "crash_pos", (gx, gy))
+                    c_px = offset_x + cx * tile_size + tile_size // 2
+                    c_py = offset_y + cy * tile_size + tile_size // 2
+                    obs_t = obstacle_types.get((cx, cy), "rock")
                     if obs_t == "water":
                         particles.add_water_splash(c_px, c_py, 24)
                     else:
@@ -1095,18 +1115,21 @@ def main():
 
             # Draw background
             screen.fill((135, 206, 235))
-            # Header Row 1: Hero icon, Character name, and ESC hint (top left)
+            # Header Row 1: Hero icon, Character name, and Back button (top left)
             hx = MARGIN
             hero_emoji_img = level_assets.get(f"emoji_{selected_character}")
             if hero_emoji_img:
                 h_icon = pygame.transform.scale(hero_emoji_img, (22, 22))
                 screen.blit(h_icon, (hx, 13))
                 hx += h_icon.get_width() + 8
-            esc_target = t("level_editor") if playing_custom else t("menu")
             c_info = CHARACTERS[selected_character]
-            char_esc_text = f"{c_info['name']}   |   ESC: {esc_target}"
-            char_surf = header_sub_font.render(char_esc_text, True, (40, 50, 60))
+            char_surf = header_sub_font.render(c_info['name'], True, (40, 50, 60))
             screen.blit(char_surf, (hx, 16))
+            hx += char_surf.get_width() + 14
+
+            # Interactive Back / ESC button for mouse and touch users
+            btn_ingame_back.rect.x = hx
+            btn_ingame_back.draw(screen, mouse_pos)
 
             # Header Row 1: In-game control action buttons (top right)
             btn_ingame_mute.draw(screen, mouse_pos)
@@ -1145,45 +1168,54 @@ def main():
             tut_idx = None if playing_custom else current_level_idx
             ui.draw(screen, active_cmd_idx=active_cmd, tutorial_level=tut_idx)
 
-            # Success Overlay
+            # Success Overlay (2 centered rows so Spanish never overflows screen)
             if game_state.state == "SUCCESS":
-                overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
-                overlay.fill((0, 255, 0, 50))
-                screen.blit(overlay, (0, 0))
-                if playing_custom:
-                    prompt = t("press_space_editor")
-                else:
-                    prompt = t("press_space_next") if current_level_idx < len(LEVELS) - 1 else t("press_space_menu")
-                win_str1 = f"{char_info['win_text']}   "
-                win_str2 = prompt
-                surf1 = font.render(win_str1, True, (255, 255, 255))
-                surf2 = font.render(win_str2, True, (255, 255, 255))
+                screen.blit(success_overlay, (0, 0))
+                prompt = t("press_space_editor") if playing_custom else (t("press_space_next") if current_level_idx < len(LEVELS) - 1 else t("press_space_menu"))
+                
+                win_text = char_info['win_text']
+                surf1 = font.render(win_text, True, (255, 255, 255))
+                surf2 = font_sub_prompt.render(prompt.strip(), True, (240, 255, 240))
                 star_img = level_assets.get("emoji_star")
-                if star_img:
-                    star_surf = pygame.transform.scale(star_img, (32, 32))
-                    tot_w = surf1.get_width() + star_surf.get_width() + surf2.get_width()
-                    tot_h = max(surf1.get_height(), star_surf.get_height())
-                    win_surf = pygame.Surface((tot_w, tot_h), pygame.SRCALPHA)
-                    win_surf.blit(surf1, (0, (tot_h - surf1.get_height()) // 2))
-                    win_surf.blit(star_surf, (surf1.get_width(), (tot_h - star_surf.get_height()) // 2))
-                    win_surf.blit(surf2, (surf1.get_width() + star_surf.get_width(), (tot_h - surf2.get_height()) // 2))
-                else:
-                    win_surf = font.render(f"{char_info['win_text']} {prompt}", True, (255, 255, 255))
-                text_rect = win_surf.get_rect(center=(screen.get_width() // 2, (screen.get_height() - UI_HEIGHT) // 2))
-                bg_rect = text_rect.inflate(28, 20)
-                pygame.draw.rect(screen, (0, 140, 0), bg_rect, border_radius=10)
-                screen.blit(win_surf, text_rect)
+                star_surf = pygame.transform.scale(star_img, (32, 32)) if star_img else None
+                star_w = star_surf.get_width() + 8 if star_surf else 0
+
+                row1_w = surf1.get_width() + star_w
+                row2_w = surf2.get_width()
+                card_w = max(row1_w, row2_w) + 48
+                card_h = surf1.get_height() + surf2.get_height() + 26
+                card_rect = pygame.Rect(screen.get_width() // 2 - card_w // 2, (screen.get_height() - UI_HEIGHT) // 2 - card_h // 2, card_w, card_h)
+
+                pygame.draw.rect(screen, (0, 140, 0), card_rect, border_radius=12)
+                pygame.draw.rect(screen, (255, 255, 255), card_rect, 2, border_radius=12)
+
+                # Draw row 1 centered
+                r1_x = card_rect.centerx - row1_w // 2
+                screen.blit(surf1, (r1_x, card_rect.y + 12))
+                if star_surf:
+                    screen.blit(star_surf, (r1_x + surf1.get_width() + 8, card_rect.y + 12 + (surf1.get_height() - star_surf.get_height()) // 2))
+
+                # Draw row 2 centered
+                r2_x = card_rect.centerx - row2_w // 2
+                screen.blit(surf2, (r2_x, card_rect.y + 16 + surf1.get_height()))
+
             # Crash Overlay
             elif game_state.state == "CRASH":
-                overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
-                overlay.fill((255, 0, 0, 50))
-                screen.blit(overlay, (0, 0))
+                screen.blit(crash_overlay, (0, 0))
                 crash_msg = t("crash_text").format(name=char_info['name'])
-                text = font.render(crash_msg, True, (255, 255, 255))
-                text_rect = text.get_rect(center=(screen.get_width() // 2, (screen.get_height() - UI_HEIGHT) // 2))
-                bg_rect = text_rect.inflate(24, 20)
-                pygame.draw.rect(screen, (160, 0, 0), bg_rect, border_radius=10)
-                screen.blit(text, text_rect)
+                surf1 = font.render(crash_msg, True, (255, 255, 255))
+                surf2 = font_sub_prompt.render(t("press_space_retry"), True, (255, 230, 230))
+                card_w = max(surf1.get_width(), surf2.get_width()) + 48
+                card_h = surf1.get_height() + surf2.get_height() + 26
+                card_rect = pygame.Rect(screen.get_width() // 2 - card_w // 2, (screen.get_height() - UI_HEIGHT) // 2 - card_h // 2, card_w, card_h)
+
+                pygame.draw.rect(screen, (170, 20, 20), card_rect, border_radius=12)
+                pygame.draw.rect(screen, (255, 255, 255), card_rect, 2, border_radius=12)
+
+                r1_x = card_rect.centerx - surf1.get_width() // 2
+                screen.blit(surf1, (r1_x, card_rect.y + 12))
+                r2_x = card_rect.centerx - surf2.get_width() // 2
+                screen.blit(surf2, (r2_x, card_rect.y + 16 + surf1.get_height()))
             pygame.display.flip()
             clock.tick(60)
 def main_wrapper():
