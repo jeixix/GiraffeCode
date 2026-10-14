@@ -138,7 +138,11 @@ STRINGS = {
         "ed_new_draft": "New Draft",
         "ed_unsolvable": "No path from Start to Goal! Add path or remove obstacles.",
         "ed_saved_ok": "Level saved successfully!",
-        "ed_deleted_ok": "Level deleted."
+        "ed_deleted_ok": "Level deleted.",
+        "ed_tip_toast": "Tip: Build your level, then click 'Test & Play'!",
+        "ed_cleared_toast": "Cleared all obstacles from grid.",
+        "ed_loaded_toast": "Loaded '{name}'",
+        "ed_created_draft_toast": "Created fresh new level draft!"
     },
     "ES": {
         "lang_name": "Español",
@@ -173,7 +177,7 @@ STRINGS = {
         "pill_repeat": "REP",
         "hint_title": "Atajos de teclado:",
         "hint_fwd": "Arriba/W: Avanzar   Borrar: Deshacer",
-        "hint_turn": "Izq/A: Girar Izq   Enter: Ejecutar/Parar",
+        "hint_turn": "Izq/A: Girar   Enter: Iniciar/Parar",
         "hint_step": "Der/D: Girar Der   S: Paso a paso",
         "hint_rep": "R: Repetir   C: Borrar todo",
         "hint_fs": "F11: Pantalla   M: Silenciar",
@@ -236,7 +240,11 @@ STRINGS = {
         "ed_new_draft": "Nuevo Borrador",
         "ed_unsolvable": "¡No hay camino libre a la meta! Retira obstáculos.",
         "ed_saved_ok": "¡Nivel guardado con éxito!",
-        "ed_deleted_ok": "Nivel eliminado."
+        "ed_deleted_ok": "Nivel eliminado.",
+        "ed_tip_toast": "Consejo: Diseña tu nivel y pulsa 'Probar y Jugar'.",
+        "ed_cleared_toast": "Se eliminaron todos los obstáculos de la cuadrícula.",
+        "ed_loaded_toast": "Nivel cargado: '{name}'",
+        "ed_created_draft_toast": "¡Nuevo borrador de nivel creado!"
     }
 }
 

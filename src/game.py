@@ -263,10 +263,24 @@ def character_select_menu(screen, assets):
             bg_image = pygame.transform.scale(raw_bg, screen.get_size())
     except Exception:
         pass
-    card_w, card_h = 320, 390
-    card1_rect = pygame.Rect(60, 145, card_w, card_h)
-    card2_rect = pygame.Rect(420, 145, card_w, card_h)
-    btn_lang = Button(screen.get_width() - 85, 20, 65, 36, get_lang(), (190, 225, 255), (220, 240, 255), "TOGGLE_LANG", font_size=24)
+    card_w, card_h = 340, 420
+    gap = 50
+    tot_cards_w = 2 * card_w + gap
+    start_x = (screen.get_width() - tot_cards_w) // 2
+    card1_rect = pygame.Rect(start_x, 155, card_w, card_h)
+    card2_rect = pygame.Rect(start_x + card_w + gap, 155, card_w, card_h)
+
+    btn_fs = Button(screen.get_width() - 110, 20, 95, 36,
+                    t("windowed") if IS_FULLSCREEN else t("fullscreen"),
+                    (110, 160, 255), (160, 205, 255), "TOGGLE_FS", font_size=20)
+    btn_lang = Button(btn_fs.rect.left - 8 - 56, 20, 56, 36, get_lang(),
+                      (190, 225, 255), (220, 240, 255), "TOGGLE_LANG", font_size=20)
+    btn_mute = Button(btn_lang.rect.left - 8 - 110, 20, 110, 36,
+                      t("sound_off") if sound_manager.is_muted else t("sound_on"),
+                      (255, 180, 180) if sound_manager.is_muted else (210, 240, 210),
+                      (255, 205, 205) if sound_manager.is_muted else (230, 250, 230),
+                      "TOGGLE_MUTE", font_size=20)
+
     btn1 = Button(card1_rect.x + 30, card1_rect.bottom - 65, card_w - 60, 48, 
                   t("card_btn_giraffe"), (100, 230, 100), (160, 255, 160), "giraffe", font_size=26)
     btn2 = Button(card2_rect.x + 30, card2_rect.bottom - 65, card_w - 60, 48, 
@@ -278,8 +292,22 @@ def character_select_menu(screen, assets):
     menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
     menu_overlay.fill((255, 255, 255, 140))
 
+    def reposition_char_elements():
+        scr_w = screen.get_width()
+        btn_fs.rect.x = scr_w - 110
+        btn_lang.rect.x = btn_fs.rect.left - 8 - 56
+        btn_mute.rect.x = btn_lang.rect.left - 8 - 110
+        s_x = (scr_w - tot_cards_w) // 2
+        card1_rect.x = s_x
+        card2_rect.x = s_x + card_w + gap
+        btn1.rect.x = card1_rect.x + 30
+        btn2.rect.x = card2_rect.x + 30
+
     def refresh_char_texts():
+        btn_fs.text = t("windowed") if IS_FULLSCREEN else t("fullscreen")
         btn_lang.text = get_lang()
+        btn_mute.text = t("sound_off") if sound_manager.is_muted else t("sound_on")
+        btn_mute.color = (255, 180, 180) if sound_manager.is_muted else (210, 240, 210)
         btn1.text = t("card_btn_giraffe")
         btn2.text = t("card_btn_cheetah")
 
@@ -289,39 +317,71 @@ def character_select_menu(screen, assets):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_F11:
+                    IS_FULLSCREEN = not IS_FULLSCREEN
+                    screen = get_screen()
+                    menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+                    menu_overlay.fill((255, 255, 255, 140))
+                    if assets.get("menu_bg_raw"):
+                        bg_image = pygame.transform.scale(assets["menu_bg_raw"], screen.get_size())
+                    reposition_char_elements()
+                    refresh_char_texts()
+                elif event.key == pygame.K_l:
+                    toggle_lang()
+                    refresh_char_texts()
+                    sound_manager.play_click()
+                elif event.key == pygame.K_m:
+                    sound_manager.toggle_mute()
+                    refresh_char_texts()
+
+            fs_act = btn_fs.handle_event(event)
+            if fs_act:
                 IS_FULLSCREEN = not IS_FULLSCREEN
                 screen = get_screen()
                 menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                 menu_overlay.fill((255, 255, 255, 140))
                 if assets.get("menu_bg_raw"):
                     bg_image = pygame.transform.scale(assets["menu_bg_raw"], screen.get_size())
-                btn_lang.rect.x = screen.get_width() - 85
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
-                toggle_lang()
+                reposition_char_elements()
                 refresh_char_texts()
+
             lang_act = btn_lang.handle_event(event)
             if lang_act:
                 toggle_lang()
                 refresh_char_texts()
+                sound_manager.play_click()
+
+            mute_act = btn_mute.handle_event(event)
+            if mute_act:
+                sound_manager.toggle_mute()
+                refresh_char_texts()
+
             action1 = btn1.handle_event(event)
             if action1:
+                sound_manager.play_click()
                 return action1
             action2 = btn2.handle_event(event)
             if action2:
+                sound_manager.play_click()
                 return action2
+
             # Allow clicking anywhere on the cards
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if card1_rect.collidepoint(event.pos):
+                    sound_manager.play_click()
                     return "giraffe"
                 elif card2_rect.collidepoint(event.pos):
+                    sound_manager.play_click()
                     return "cheetah"
+
         # Background
         if bg_image:
             screen.blit(bg_image, (0, 0))
             screen.blit(menu_overlay, (0, 0))
         else:
             screen.fill((135, 206, 235))
+
         # Header
         title = font_title.render(t("choose_hero_title"), True, (0, 90, 0))
         title_rect = title.get_rect(center=(screen.get_width() // 2, 60))
@@ -331,7 +391,12 @@ def character_select_menu(screen, assets):
         subtitle = font_sub.render(t("choose_hero_sub"), True, (40, 40, 40))
         sub_rect = subtitle.get_rect(center=(screen.get_width() // 2, 112))
         screen.blit(subtitle, sub_rect)
+
+        # Header buttons
+        btn_mute.draw(screen, mouse_pos)
         btn_lang.draw(screen, mouse_pos)
+        btn_fs.draw(screen, mouse_pos)
+
         # Draw Card 1: Giraffe
         hover1 = card1_rect.collidepoint(mouse_pos)
         c1_bg = (240, 255, 240) if hover1 else (255, 255, 255)
@@ -349,16 +414,17 @@ def character_select_menu(screen, assets):
         else:
             screen.blit(t1, (card1_rect.centerx - t1.get_width() // 2, card1_rect.y + 20))
         if preview_giraffe and preview_tree:
-            screen.blit(preview_giraffe, (card1_rect.x + 35, card1_rect.y + 75))
-            arr_x = card1_rect.x + 155
-            arr_y = card1_rect.y + 130
+            screen.blit(preview_giraffe, (card1_rect.x + 40, card1_rect.y + 85))
+            arr_x = card1_rect.x + 170
+            arr_y = card1_rect.y + 140
             pygame.draw.polygon(screen, (0, 160, 0), [(arr_x - 8, arr_y - 10), (arr_x + 8, arr_y), (arr_x - 8, arr_y + 10)])
-            screen.blit(preview_tree, (card1_rect.x + 185, card1_rect.y + 85))
+            screen.blit(preview_tree, (card1_rect.x + 200, card1_rect.y + 95))
         desc1_a = font_card_desc.render(t("card_goal_giraffe"), True, (40, 80, 40))
         desc1_b = font_card_desc.render(t("card_desc_giraffe"), True, (80, 80, 80))
-        screen.blit(desc1_a, (card1_rect.centerx - desc1_a.get_width() // 2, card1_rect.y + 225))
-        screen.blit(desc1_b, (card1_rect.centerx - desc1_b.get_width() // 2, card1_rect.y + 255))
+        screen.blit(desc1_a, (card1_rect.centerx - desc1_a.get_width() // 2, card1_rect.y + 245))
+        screen.blit(desc1_b, (card1_rect.centerx - desc1_b.get_width() // 2, card1_rect.y + 278))
         btn1.draw(screen, mouse_pos)
+
         # Draw Card 2: Cheetah
         hover2 = card2_rect.collidepoint(mouse_pos)
         c2_bg = (255, 248, 235) if hover2 else (255, 255, 255)
@@ -376,15 +442,15 @@ def character_select_menu(screen, assets):
         else:
             screen.blit(t2, (card2_rect.centerx - t2.get_width() // 2, card2_rect.y + 20))
         if preview_cheetah and preview_gazelle:
-            screen.blit(preview_cheetah, (card2_rect.x + 35, card2_rect.y + 75))
-            arr_x = card2_rect.x + 155
-            arr_y = card2_rect.y + 130
+            screen.blit(preview_cheetah, (card2_rect.x + 40, card2_rect.y + 85))
+            arr_x = card2_rect.x + 170
+            arr_y = card2_rect.y + 140
             pygame.draw.polygon(screen, (220, 100, 0), [(arr_x - 8, arr_y - 10), (arr_x + 8, arr_y), (arr_x - 8, arr_y + 10)])
-            screen.blit(preview_gazelle, (card2_rect.x + 185, card2_rect.y + 85))
+            screen.blit(preview_gazelle, (card2_rect.x + 200, card2_rect.y + 95))
         desc2_a = font_card_desc.render(t("card_goal_cheetah"), True, (120, 50, 0))
         desc2_b = font_card_desc.render(t("card_desc_cheetah"), True, (80, 80, 80))
-        screen.blit(desc2_a, (card2_rect.centerx - desc2_a.get_width() // 2, card2_rect.y + 225))
-        screen.blit(desc2_b, (card2_rect.centerx - desc2_b.get_width() // 2, card2_rect.y + 255))
+        screen.blit(desc2_a, (card2_rect.centerx - desc2_a.get_width() // 2, card2_rect.y + 245))
+        screen.blit(desc2_b, (card2_rect.centerx - desc2_b.get_width() // 2, card2_rect.y + 278))
         btn2.draw(screen, mouse_pos)
         pygame.display.flip()
         clock.tick(60)
@@ -986,6 +1052,27 @@ def main():
                     last_game_state = "IDLE"
                     transitioned = True
                     break
+
+                # Mouse click on victory / crash overlay acts like SPACE
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if game_state.state == "SUCCESS":
+                        particles.clear()
+                        if playing_custom:
+                            state = "EDITOR"
+                        elif current_level_idx < len(LEVELS) - 1:
+                            current_level_idx += 1
+                            screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, last_player_pos = load_level(current_level_idx)
+                            refresh_ingame_headers()
+                        else:
+                            state = "MENU"
+                        last_game_state = "IDLE"
+                        transitioned = True
+                        break
+                    elif game_state.state == "CRASH":
+                        particles.clear()
+                        game_state.reset()
+                        last_game_state = "IDLE"
+                        continue
 
                 # UI bottom bar button actions
                 action = ui.handle_event(event)

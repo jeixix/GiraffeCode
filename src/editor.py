@@ -11,7 +11,7 @@ import pygame
 from src.levels import Level
 from src.sound import sound_manager
 from src.ui import Button, load_icon
-from src.i18n import t
+from src.i18n import t, get_lang, toggle_lang
 
 def get_base_data_dir():
     r"""
@@ -205,7 +205,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
     current_tool = "ROCK"
 
     # Feedback toast
-    toast_msg = "Tip: Build your level, then click 'Test & Play'!"
+    toast_msg = t("ed_tip_toast")
     toast_color = (40, 100, 40)
     toast_bg = (220, 255, 220)
     toast_expiry = pygame.time.get_ticks() + 4000
@@ -222,6 +222,8 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
     btn_fs = Button(screen.get_width() - 170, 15, 150, 40,
                     t("windowed") if is_fullscreen_getter() else t("fullscreen"),
                     (100, 150, 255), (150, 200, 255), "TOGGLE_FS", font_size=20)
+    btn_lang = Button(screen.get_width() - 245, 15, 65, 40, get_lang(),
+                      (190, 225, 255), (220, 240, 255), "TOGGLE_LANG", font_size=20)
 
     # Tool selection buttons
     tool_buttons = [
@@ -255,11 +257,26 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                       t("ed_save_level"), (255, 200, 80), (255, 220, 120), "SAVE_LEVEL", icon=icon_save, icon_pos="right", font_size=22)
 
     all_ui_buttons = tool_buttons + [
-        btn_menu, btn_fs,
+        btn_menu, btn_fs, btn_lang,
         btn_w_minus, btn_w_plus, btn_h_minus, btn_h_plus,
         btn_prev, btn_next, btn_new, btn_clear, btn_del,
         btn_test_play, btn_save
     ]
+
+    def refresh_editor_texts():
+        btn_menu.text = t("ed_back")
+        btn_fs.text = t("windowed") if is_fullscreen_getter() else t("fullscreen")
+        btn_lang.text = get_lang()
+        tool_buttons[0].text = t("ed_hero_start")
+        tool_buttons[1].text = t("ed_goal_target")
+        tool_buttons[2].text = t("ed_rock")
+        tool_buttons[3].text = t("ed_water")
+        tool_buttons[4].text = t("ed_eraser")
+        btn_new.text = t("ed_new_level")
+        btn_clear.text = t("ed_clear_grid")
+        btn_del.text = t("ed_delete_lvl")
+        btn_test_play.text = t("ed_test_play")
+        btn_save.text = t("ed_save_level")
 
     mouse_down = False
     last_drag_cell = None
@@ -344,19 +361,25 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                 pygame.quit()
                 sys.exit()
 
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                is_fullscreen_setter(not is_fullscreen_getter())
-                screen = get_screen_fn()
-                if raw_bg is not None:
-                    bg_image = pygame.transform.scale(raw_bg, screen.get_size())
-                menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-                menu_overlay.fill((255, 255, 255, 140))
-                btn_fs.text = t("windowed") if is_fullscreen_getter() else t("fullscreen")
-                btn_fs.rect.x = screen.get_width() - 170
-                btn_test_play.rect.x = screen.get_width() // 2 - 210
-                btn_test_play.rect.y = screen.get_height() - 75
-                btn_save.rect.x = screen.get_width() // 2 + 10
-                btn_save.rect.y = screen.get_height() - 75
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_F11:
+                    is_fullscreen_setter(not is_fullscreen_getter())
+                    screen = get_screen_fn()
+                    if raw_bg is not None:
+                        bg_image = pygame.transform.scale(raw_bg, screen.get_size())
+                    menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+                    menu_overlay.fill((255, 255, 255, 140))
+                    btn_fs.text = t("windowed") if is_fullscreen_getter() else t("fullscreen")
+                    btn_fs.rect.x = screen.get_width() - 170
+                    btn_lang.rect.x = screen.get_width() - 245
+                    btn_test_play.rect.x = screen.get_width() // 2 - 210
+                    btn_test_play.rect.y = screen.get_height() - 75
+                    btn_save.rect.x = screen.get_width() // 2 + 10
+                    btn_save.rect.y = screen.get_height() - 75
+                elif event.key == pygame.K_l:
+                    toggle_lang()
+                    refresh_editor_texts()
+                    sound_manager.play_click()
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1: # Left click
@@ -405,10 +428,18 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         bg_image = pygame.transform.scale(raw_bg, screen.get_size())
                     menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                     menu_overlay.fill((255, 255, 255, 140))
-                    btn_fs.text = "Windowed" if is_fullscreen_getter() else "Fullscreen"
+                    btn_fs.text = t("windowed") if is_fullscreen_getter() else t("fullscreen")
                     btn_fs.rect.x = screen.get_width() - 170
+                    btn_lang.rect.x = screen.get_width() - 245
                     btn_test_play.rect.x = screen.get_width() // 2 - 210
+                    btn_test_play.rect.y = screen.get_height() - 75
                     btn_save.rect.x = screen.get_width() // 2 + 10
+                    btn_save.rect.y = screen.get_height() - 75
+
+                elif act == "TOGGLE_LANG":
+                    toggle_lang()
+                    refresh_editor_texts()
+                    sound_manager.play_click()
 
                 elif act == "TOOL_START":
                     current_tool = "START"
@@ -466,26 +497,26 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                     state["start_x"], state["start_y"] = 0, 0
                     state["goal_x"], state["goal_y"] = state["width"] - 1, state["height"] - 1
                     sound_manager.play_click()
-                    show_toast("Cleared all obstacles from grid.")
+                    show_toast(t("ed_cleared_toast"))
 
                 elif act == "PREV_LEVEL":
                     if saved_levels and current_level_idx > 0:
                         current_level_idx -= 1
                         state = dict(saved_levels[current_level_idx])
                         sound_manager.play_click()
-                        show_toast(f"Loaded '{state['name']}'")
+                        show_toast(t("ed_loaded_toast").format(name=state['name']))
                 elif act == "NEXT_LEVEL":
                     if saved_levels and current_level_idx < len(saved_levels) - 1:
                         current_level_idx += 1
                         state = dict(saved_levels[current_level_idx])
                         sound_manager.play_click()
-                        show_toast(f"Loaded '{state['name']}'")
+                        show_toast(t("ed_loaded_toast").format(name=state['name']))
 
                 elif act == "NEW_LEVEL":
                     current_level_idx = len(saved_levels)
                     state = get_default_level_state(current_level_idx)
                     sound_manager.play_click()
-                    show_toast("Created fresh new level draft!")
+                    show_toast(t("ed_created_draft_toast"))
 
                 elif act == "DEL_LEVEL":
                     if saved_levels and 0 <= current_level_idx < len(saved_levels):

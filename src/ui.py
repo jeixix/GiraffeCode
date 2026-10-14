@@ -207,7 +207,7 @@ class UI:
         for idx, line in enumerate(hint_lines):
             color = (80, 80, 80) if idx == 0 else (120, 120, 120)
             hint_surf = self.hint_font.render(line, True, color)
-            surface.blit(hint_surf, (808, self.height - 114 + idx * 15))
+            surface.blit(hint_surf, (798, self.height - 114 + idx * 15))
             
         # Draw program queue pills (contained strictly within 2 rows above buttons)
         short_names = {
@@ -222,7 +222,7 @@ class UI:
             surface.blit(text_surf, (20, self.height - 138))
         else:
             old_clip = surface.get_clip()
-            pill_area = pygame.Rect(10, self.height - 146, 792, 76)
+            pill_area = pygame.Rect(10, self.height - 146, 782, 76)
             surface.set_clip(pill_area)
 
             # Determine visible window if commands are numerous
@@ -234,7 +234,7 @@ class UI:
             cur_y = self.height - 142
             pill_h = 20
             row_spacing = 24
-            max_w = 790
+            max_w = 786
             max_y = self.height - 94  # Max 2 rows (row 0: -142, row 1: -118)
 
             if start_idx > 0:
@@ -275,6 +275,9 @@ class UI:
                     elif cmd == "LEFT":
                         bg_col = (220, 230, 255)
                         bd_col = (80, 110, 220)
+                    elif cmd == "REPEAT":
+                        bg_col = (240, 220, 255)
+                        bd_col = (160, 100, 220)
                     else:
                         bg_col = (255, 220, 220)
                         bd_col = (220, 80, 80)
