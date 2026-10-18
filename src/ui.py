@@ -304,10 +304,11 @@ class UI:
         
     def handle_event(self, event):
         if self.is_running:
-            # When running, allow STOP button click
-            action = self.btn_run.handle_event(event)
-            if action:
-                return action
+            # When running, allow STOP or STEP button click (to pause into single-step mode)
+            for btn in (self.btn_run, self.btn_step):
+                action = btn.handle_event(event)
+                if action:
+                    return action
             return None
 
         for btn in self.buttons:

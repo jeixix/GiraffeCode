@@ -584,6 +584,8 @@ def main_menu(screen, selected_char, assets, completed_levels):
                 saved_levels = load_custom_levels()
                 if saved_levels:
                     custom_lvl = custom_dict_to_level(saved_levels[0])
+                    custom_lvl.custom_idx = 0
+                    custom_lvl.from_editor = False
                     return ("PLAY_CUSTOM", custom_lvl)
                 else:
                     return "LEVEL_EDITOR"
@@ -874,6 +876,9 @@ def main():
 
     playing_custom = False
     custom_level_obj = None
+    current_custom_idx = 0
+    custom_from_editor = False
+    custom_total_count = 0
     level = None
 
     # In-game top header action buttons
@@ -889,7 +894,7 @@ def main():
         btn_ingame_speed.text = f"1x {t('speed_normal')}" if (executor and executor.speed_mode == "NORMAL") else f"2x {t('speed_fast')}"
         btn_ingame_mute.text = t("sound_off") if sound_manager.is_muted else t("sound_on")
         btn_ingame_mute.color = (255, 180, 180) if sound_manager.is_muted else (210, 240, 210)
-        esc_target = t("level_editor") if playing_custom else t("menu")
+        esc_target = t("level_editor") if (playing_custom and custom_from_editor) else t("menu")
         btn_ingame_back.text = f"ESC: {esc_target}"
         if level:
             c_info = CHARACTERS[selected_character]
@@ -897,17 +902,21 @@ def main():
             pygame.display.set_caption(f"SavannaCode - {c_info['name']} - {lvl_title}")
 
     def load_level(idx_or_level):
-        nonlocal current_level_idx, playing_custom, custom_level_obj, level
+        nonlocal current_level_idx, playing_custom, custom_level_obj, level, current_custom_idx, custom_from_editor, custom_total_count
         if isinstance(idx_or_level, Level):
             level = idx_or_level
             custom_level_obj = level
             playing_custom = True
+            current_custom_idx = getattr(level, "custom_idx", 0)
+            custom_from_editor = getattr(level, "from_editor", True)
+            custom_total_count = len(load_custom_levels()) if not custom_from_editor else 0
             idx = 0
         else:
             idx = idx_or_level
             level = LEVELS[idx]
             playing_custom = False
             custom_level_obj = None
+            custom_total_count = 0
 
         screen_w = LOGICAL_WIDTH
         screen_h = LOGICAL_HEIGHT
@@ -987,6 +996,7 @@ def main():
                 state = "CHAR_SELECT"
                 continue
             elif menu_action == "LEVEL_EDITOR":
+                current_custom_idx = 0
                 state = "EDITOR"
                 continue
             elif isinstance(menu_action, tuple) and menu_action[0] == "PLAY_CUSTOM":
@@ -1007,7 +1017,8 @@ def main():
                 screen, assets, selected_character,
                 get_screen_fn=get_screen,
                 is_fullscreen_getter=lambda: IS_FULLSCREEN,
-                is_fullscreen_setter=set_fullscreen
+                is_fullscreen_setter=set_fullscreen,
+                initial_level_idx=current_custom_idx
             )
             if editor_action == "PLAY_CUSTOM" and custom_lvl:
                 state = "PLAYING"
@@ -1048,7 +1059,7 @@ def main():
                     refresh_ingame_headers()
                 if btn_ingame_back.handle_event(event):
                     particles.clear()
-                    state = "EDITOR" if playing_custom else "MENU"
+                    state = "EDITOR" if (playing_custom and custom_from_editor) else "MENU"
                     last_game_state = "IDLE"
                     transitioned = True
                     break
@@ -1058,7 +1069,19 @@ def main():
                     if game_state.state == "SUCCESS":
                         particles.clear()
                         if playing_custom:
-                            state = "EDITOR"
+                            if custom_from_editor:
+                                state = "EDITOR"
+                            else:
+                                saved_custom = load_custom_levels()
+                                if current_custom_idx + 1 < len(saved_custom):
+                                    next_c_idx = current_custom_idx + 1
+                                    next_c_lvl = custom_dict_to_level(saved_custom[next_c_idx])
+                                    next_c_lvl.custom_idx = next_c_idx
+                                    next_c_lvl.from_editor = False
+                                    screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, last_player_pos = load_level(next_c_lvl)
+                                    refresh_ingame_headers()
+                                else:
+                                    state = "MENU"
                         elif current_level_idx < len(LEVELS) - 1:
                             current_level_idx += 1
                             screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, last_player_pos = load_level(current_level_idx)
@@ -1070,59 +1093,92 @@ def main():
                         break
                     elif game_state.state == "CRASH":
                         particles.clear()
-                        game_state.reset()
+                        executor.reset_state()
                         last_game_state = "IDLE"
                         continue
 
-                # UI bottom bar button actions
-                action = ui.handle_event(event)
-                if action in ["FORWARD", "LEFT", "RIGHT", "REPEAT"]:
-                    ui.add_command(action)
-                elif action == "UNDO":
-                    ui.undo_command()
-                elif action == "STEP":
-                    executor.step_once()
-                    last_game_state = "IDLE"
-                elif action == "RUN":
-                    executor.start()
-                    last_game_state = "RUNNING"
-                elif action == "STOP":
-                    executor.stop()
-                    last_game_state = "IDLE"
-                elif action == "CLEAR":
-                    ui.clear_commands()
-                    game_state.reset()
-                    particles.clear()
-                    last_game_state = "IDLE"
+                # UI bottom bar button actions (disabled while victory/crash modal is active)
+                if game_state.state not in ("SUCCESS", "CRASH"):
+                    action = ui.handle_event(event)
+                    if action in ["FORWARD", "LEFT", "RIGHT", "REPEAT"]:
+                        if game_state.state != "IDLE":
+                            executor.reset_state()
+                            particles.clear()
+                            last_game_state = "IDLE"
+                        ui.add_command(action)
+                    elif action == "UNDO":
+                        if game_state.state != "IDLE":
+                            executor.reset_state()
+                            particles.clear()
+                            last_game_state = "IDLE"
+                        ui.undo_command()
+                    elif action == "STEP":
+                        executor.step_once()
+                        last_game_state = "IDLE"
+                    elif action == "RUN":
+                        executor.start()
+                        last_game_state = "RUNNING"
+                    elif action == "STOP":
+                        executor.stop()
+                        last_game_state = "IDLE"
+                    elif action == "CLEAR":
+                        ui.clear_commands()
+                        executor.reset_state()
+                        particles.clear()
+                        last_game_state = "IDLE"
 
                 # Keyboard shortcuts for coding & controls
                 if event.type == pygame.KEYDOWN:
-                    if not executor.is_running:
-                        if event.key in (pygame.K_w, pygame.K_UP):
-                            ui.add_command("FORWARD")
-                        elif event.key in (pygame.K_a, pygame.K_LEFT):
-                            ui.add_command("LEFT")
-                        elif event.key in (pygame.K_d, pygame.K_RIGHT):
-                            ui.add_command("RIGHT")
-                        elif event.key == pygame.K_r:
-                            ui.add_command("REPEAT")
-                        elif event.key == pygame.K_BACKSPACE:
-                            ui.undo_command()
-                        elif event.key == pygame.K_c:
-                            ui.clear_commands()
-                            game_state.reset()
-                            particles.clear()
-                            last_game_state = "IDLE"
-                        elif event.key == pygame.K_s:
-                            executor.step_once()
-                            last_game_state = "IDLE"
-                        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                            executor.start()
-                            last_game_state = "RUNNING"
-                    else:
-                        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                            executor.stop()
-                            last_game_state = "IDLE"
+                    if game_state.state not in ("SUCCESS", "CRASH"):
+                        if not executor.is_running:
+                            if event.key in (pygame.K_w, pygame.K_UP):
+                                if game_state.state != "IDLE":
+                                    executor.reset_state()
+                                    particles.clear()
+                                    last_game_state = "IDLE"
+                                ui.add_command("FORWARD")
+                            elif event.key in (pygame.K_a, pygame.K_LEFT):
+                                if game_state.state != "IDLE":
+                                    executor.reset_state()
+                                    particles.clear()
+                                    last_game_state = "IDLE"
+                                ui.add_command("LEFT")
+                            elif event.key in (pygame.K_d, pygame.K_RIGHT):
+                                if game_state.state != "IDLE":
+                                    executor.reset_state()
+                                    particles.clear()
+                                    last_game_state = "IDLE"
+                                ui.add_command("RIGHT")
+                            elif event.key == pygame.K_r:
+                                if game_state.state != "IDLE":
+                                    executor.reset_state()
+                                    particles.clear()
+                                    last_game_state = "IDLE"
+                                ui.add_command("REPEAT")
+                            elif event.key == pygame.K_BACKSPACE:
+                                if game_state.state != "IDLE":
+                                    executor.reset_state()
+                                    particles.clear()
+                                    last_game_state = "IDLE"
+                                ui.undo_command()
+                            elif event.key == pygame.K_c:
+                                ui.clear_commands()
+                                executor.reset_state()
+                                particles.clear()
+                                last_game_state = "IDLE"
+                            elif event.key == pygame.K_s:
+                                executor.step_once()
+                                last_game_state = "IDLE"
+                            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                                executor.start()
+                                last_game_state = "RUNNING"
+                        else:
+                            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                                executor.stop()
+                                last_game_state = "IDLE"
+                            elif event.key == pygame.K_s:
+                                executor.step_once()
+                                last_game_state = "IDLE"
 
                     if event.key == pygame.K_t:
                         executor.toggle_speed()
@@ -1138,7 +1194,19 @@ def main():
                     if event.key == pygame.K_SPACE and game_state.state == "SUCCESS":
                         particles.clear()
                         if playing_custom:
-                            state = "EDITOR"
+                            if custom_from_editor:
+                                state = "EDITOR"
+                            else:
+                                saved_custom = load_custom_levels()
+                                if current_custom_idx + 1 < len(saved_custom):
+                                    next_c_idx = current_custom_idx + 1
+                                    next_c_lvl = custom_dict_to_level(saved_custom[next_c_idx])
+                                    next_c_lvl.custom_idx = next_c_idx
+                                    next_c_lvl.from_editor = False
+                                    screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, last_player_pos = load_level(next_c_lvl)
+                                    refresh_ingame_headers()
+                                else:
+                                    state = "MENU"
                         elif current_level_idx < len(LEVELS) - 1:
                             current_level_idx += 1
                             screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, last_player_pos = load_level(current_level_idx)
@@ -1150,11 +1218,11 @@ def main():
                         break
                     elif event.key == pygame.K_SPACE and game_state.state == "CRASH":
                         particles.clear()
-                        game_state.reset()
+                        executor.reset_state()
                         last_game_state = "IDLE"
                     elif event.key == pygame.K_ESCAPE:
                         particles.clear()
-                        state = "EDITOR" if playing_custom else "MENU"
+                        state = "EDITOR" if (playing_custom and custom_from_editor) else "MENU"
                         last_game_state = "IDLE"
                         transitioned = True
                         break
@@ -1258,7 +1326,15 @@ def main():
             # Success Overlay (2 centered rows so Spanish never overflows screen)
             if game_state.state == "SUCCESS":
                 screen.blit(success_overlay, (0, 0))
-                prompt = t("press_space_editor") if playing_custom else (t("press_space_next") if current_level_idx < len(LEVELS) - 1 else t("press_space_menu"))
+                if playing_custom:
+                    if custom_from_editor:
+                        prompt = t("press_space_editor")
+                    elif current_custom_idx + 1 < custom_total_count:
+                        prompt = t("press_space_next")
+                    else:
+                        prompt = t("press_space_menu")
+                else:
+                    prompt = t("press_space_next") if current_level_idx < len(LEVELS) - 1 else t("press_space_menu")
                 
                 win_text = char_info['win_text']
                 surf1 = font.render(win_text, True, (255, 255, 255))

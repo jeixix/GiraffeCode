@@ -5,6 +5,7 @@ Allows players to build custom levels with mandatory solvability verification be
 import os
 import sys
 import json
+import copy
 import math
 from collections import deque
 import pygame
@@ -144,7 +145,13 @@ def custom_dict_to_level(data):
     lvl.obstacle_types = data.get("obstacle_types", {})
     return lvl
 
-def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscreen_getter, is_fullscreen_setter):
+def clone_level_state(lvl_dict):
+    s = copy.deepcopy(lvl_dict)
+    if "obstacle_types" not in s or not isinstance(s["obstacle_types"], dict):
+        s["obstacle_types"] = {f"{o[0]},{o[1]}": "rock" for o in s.get("obstacles", [])}
+    return s
+
+def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscreen_getter, is_fullscreen_setter, initial_level_idx=0):
     """
     Main interactive Level Editor loop.
     Returns:
@@ -173,7 +180,10 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
 
     # Saved levels list
     saved_levels = load_custom_levels()
-    current_level_idx = 0 if saved_levels else -1
+    if saved_levels:
+        current_level_idx = max(0, min(initial_level_idx, len(saved_levels) - 1))
+    else:
+        current_level_idx = -1
 
     # Current level state
     def get_default_level_state(idx=0):
@@ -193,11 +203,8 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
             }
         }
 
-    if saved_levels:
-        state = dict(saved_levels[0])
-        # ensure obstacle_types exists
-        if "obstacle_types" not in state:
-            state["obstacle_types"] = {f"{o[0]},{o[1]}": "rock" for o in state.get("obstacles", [])}
+    if saved_levels and 0 <= current_level_idx < len(saved_levels):
+        state = clone_level_state(saved_levels[current_level_idx])
     else:
         state = get_default_level_state(0)
 
@@ -502,13 +509,13 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                 elif act == "PREV_LEVEL":
                     if saved_levels and current_level_idx > 0:
                         current_level_idx -= 1
-                        state = dict(saved_levels[current_level_idx])
+                        state = clone_level_state(saved_levels[current_level_idx])
                         sound_manager.play_click()
                         show_toast(t("ed_loaded_toast").format(name=state['name']))
                 elif act == "NEXT_LEVEL":
                     if saved_levels and current_level_idx < len(saved_levels) - 1:
                         current_level_idx += 1
-                        state = dict(saved_levels[current_level_idx])
+                        state = clone_level_state(saved_levels[current_level_idx])
                         sound_manager.play_click()
                         show_toast(t("ed_loaded_toast").format(name=state['name']))
 
@@ -525,7 +532,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         sound_manager.play_click()
                         if saved_levels:
                             current_level_idx = max(0, min(current_level_idx, len(saved_levels) - 1))
-                            state = dict(saved_levels[current_level_idx])
+                            state = clone_level_state(saved_levels[current_level_idx])
                         else:
                             current_level_idx = -1
                             state = get_default_level_state(0)
@@ -548,7 +555,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         # SAVE LEVEL AND PERMIT PLAY
                         sound_manager.play_win()
                         # Update or append to saved_levels
-                        level_dict = dict(state)
+                        level_dict = clone_level_state(state)
                         if saved_levels and 0 <= current_level_idx < len(saved_levels):
                             saved_levels[current_level_idx] = level_dict
                         else:
@@ -561,6 +568,8 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         else:
                             # Launch custom level directly in gameplay!
                             lvl_obj = custom_dict_to_level(level_dict)
+                            lvl_obj.custom_idx = current_level_idx
+                            lvl_obj.from_editor = True
                             return "PLAY_CUSTOM", lvl_obj
 
         # ---------------- RENDER ----------------
@@ -612,13 +621,18 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         screen.blit(w_lbl, (68, 444))
         screen.blit(h_lbl, (68, 489))
 
-        # Level index indicator
+        # Level index indicator (centered & auto-fitted inside the 60px gap [65..125] between < and >)
         if not saved_levels or current_level_idx >= len(saved_levels) or current_level_idx < 0:
-            idx_txt = t("ed_new_draft")
+            idx_txt = t("ed_draft")
         else:
             idx_txt = f"{current_level_idx + 1}/{len(saved_levels)}"
-        idx_lbl = font_ui.render(idx_txt, True, (40, 40, 40))
-        screen.blit(idx_lbl, (75, 554))
+        idx_sz = 22
+        idx_font = font_ui
+        while idx_font.size(idx_txt)[0] > 54 and idx_sz > 12:
+            idx_sz -= 1
+            idx_font = pygame.font.Font(None, idx_sz)
+        idx_lbl = idx_font.render(idx_txt, True, (40, 40, 40))
+        screen.blit(idx_lbl, idx_lbl.get_rect(center=(95, 563)))
 
         # Highlight currently selected tool button
         for btn in tool_buttons:
@@ -636,6 +650,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         # Draw remaining buttons
         btn_menu.draw(screen, mouse_pos)
         btn_fs.draw(screen, mouse_pos)
+        btn_lang.draw(screen, mouse_pos)
         btn_w_minus.draw(screen, mouse_pos)
         btn_w_plus.draw(screen, mouse_pos)
         btn_h_minus.draw(screen, mouse_pos)

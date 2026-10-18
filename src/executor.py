@@ -41,9 +41,17 @@ class Executor:
     def stop(self):
         self.is_running = False
         self.command_index = -1
+        self.loop_counters = {}
         self.ui.set_running(False)
         if self.game_state.state == "RUNNING":
             self.game_state.state = "IDLE"
+
+    def reset_state(self):
+        self.is_running = False
+        self.command_index = -1
+        self.loop_counters = {}
+        self.ui.set_running(False)
+        self.game_state.reset()
 
     def step_once(self):
         """Single-step debugger: executes exactly one command and pauses."""
@@ -78,6 +86,9 @@ class Executor:
             return
         cmd = self.ui.commands[self.command_index]
         if cmd == "REPEAT":
+            if self.command_index == 0:
+                self.command_index += 1
+                return
             count = self.loop_counters.get(self.command_index, 0)
             if count < 2:
                 self.loop_counters[self.command_index] = count + 1
