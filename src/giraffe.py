@@ -37,9 +37,9 @@ class Giraffe:
         
         is_moving = abs(dx) > 1 or abs(dy) > 1
         if is_moving:
-            # Interpolation speed
-            self.pixel_x += dx * 0.15
-            self.pixel_y += dy * 0.15
+            # Interpolation speed (smooth & responsive at both 1x and 2x speed)
+            self.pixel_x += dx * 0.28
+            self.pixel_y += dy * 0.28
             # Animation speed
             self.walk_frame += 0.35
             

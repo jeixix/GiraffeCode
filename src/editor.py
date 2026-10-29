@@ -11,7 +11,7 @@ from collections import deque
 import pygame
 from src.levels import Level
 from src.sound import sound_manager
-from src.ui import Button, load_icon
+from src.ui import Button, load_icon, get_cached_font
 from src.i18n import t, get_lang, toggle_lang
 
 def get_base_data_dir():
@@ -528,7 +528,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                 elif act == "DEL_LEVEL":
                     if saved_levels and 0 <= current_level_idx < len(saved_levels):
                         del saved_levels[current_level_idx]
-                        save_custom_levels(saved_levels)
+                        ok = save_custom_levels(saved_levels)
                         sound_manager.play_click()
                         if saved_levels:
                             current_level_idx = max(0, min(current_level_idx, len(saved_levels) - 1))
@@ -536,7 +536,10 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         else:
                             current_level_idx = -1
                             state = get_default_level_state(0)
-                        show_toast(t("ed_deleted_ok"))
+                        if ok:
+                            show_toast(t("ed_deleted_ok"))
+                        else:
+                            show_toast(t("ed_save_failed"), is_error=True)
 
                 elif act in ("SAVE_LEVEL", "TEST_PLAY"):
                     # MANDATORY SOLVABILITY CHECK!
@@ -550,10 +553,17 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                     if not solvable:
                         # PLAY CANNOT PROCEED IF UNSOLVABLE!
                         sound_manager.play_error()
-                        show_toast(t("ed_unsolvable"), is_error=True, duration_ms=5500)
+                        msg_lower = message.lower()
+                        if "same tile" in msg_lower:
+                            err_toast = t("ed_err_same_tile")
+                        elif "start tile cannot be placed" in msg_lower:
+                            err_toast = t("ed_err_start_obstacle")
+                        elif "goal tile cannot be placed" in msg_lower:
+                            err_toast = t("ed_err_goal_obstacle")
+                        else:
+                            err_toast = t("ed_unsolvable")
+                        show_toast(err_toast, is_error=True, duration_ms=5500)
                     else:
-                        # SAVE LEVEL AND PERMIT PLAY
-                        sound_manager.play_win()
                         # Update or append to saved_levels
                         level_dict = clone_level_state(state)
                         if saved_levels and 0 <= current_level_idx < len(saved_levels):
@@ -561,16 +571,21 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         else:
                             saved_levels.append(level_dict)
                             current_level_idx = len(saved_levels) - 1
-                        save_custom_levels(saved_levels)
+                        ok = save_custom_levels(saved_levels)
 
-                        if act == "SAVE_LEVEL":
-                            show_toast(t("ed_saved_ok"))
+                        if not ok:
+                            sound_manager.play_error()
+                            show_toast(t("ed_save_failed"), is_error=True, duration_ms=5500)
                         else:
-                            # Launch custom level directly in gameplay!
-                            lvl_obj = custom_dict_to_level(level_dict)
-                            lvl_obj.custom_idx = current_level_idx
-                            lvl_obj.from_editor = True
-                            return "PLAY_CUSTOM", lvl_obj
+                            sound_manager.play_win()
+                            if act == "SAVE_LEVEL":
+                                show_toast(t("ed_saved_ok"))
+                            else:
+                                # Launch custom level directly in gameplay!
+                                lvl_obj = custom_dict_to_level(level_dict)
+                                lvl_obj.custom_idx = current_level_idx
+                                lvl_obj.from_editor = True
+                                return "PLAY_CUSTOM", lvl_obj
 
         # ---------------- RENDER ----------------
         if bg_image:
@@ -627,10 +642,10 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         else:
             idx_txt = f"{current_level_idx + 1}/{len(saved_levels)}"
         idx_sz = 22
-        idx_font = font_ui
+        idx_font = get_cached_font(idx_sz)
         while idx_font.size(idx_txt)[0] > 54 and idx_sz > 12:
             idx_sz -= 1
-            idx_font = pygame.font.Font(None, idx_sz)
+            idx_font = get_cached_font(idx_sz)
         idx_lbl = idx_font.render(idx_txt, True, (40, 40, 40))
         screen.blit(idx_lbl, idx_lbl.get_rect(center=(95, 563)))
 

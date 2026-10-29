@@ -43,8 +43,7 @@ class Executor:
         self.command_index = -1
         self.loop_counters = {}
         self.ui.set_running(False)
-        if self.game_state.state == "RUNNING":
-            self.game_state.state = "IDLE"
+        self.game_state.reset()
 
     def reset_state(self):
         self.is_running = False
@@ -89,10 +88,21 @@ class Executor:
             if self.command_index == 0:
                 self.command_index += 1
                 return
+            # Find loop start: index right after the previous REPEAT, or 0 if none
+            loop_start = 0
+            for i in range(self.command_index - 1, -1, -1):
+                if self.ui.commands[i] == "REPEAT":
+                    loop_start = i + 1
+                    break
+            if loop_start >= self.command_index:
+                # Consecutive REPEATs or nothing in between
+                self.command_index += 1
+                return
+
             count = self.loop_counters.get(self.command_index, 0)
             if count < 2:
                 self.loop_counters[self.command_index] = count + 1
-                self.command_index = 0
+                self.command_index = loop_start
                 sound_manager.play_turn()
             else:
                 self.loop_counters[self.command_index] = 0

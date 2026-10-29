@@ -27,8 +27,12 @@ class Level:
             try:
                 if self.name.startswith("Level "):
                     idx = int(self.name.split(":")[0].replace("Level ", "").strip()) - 1
+                else:
+                    idx = 0
             except Exception:
                 idx = 0
+        if idx is None:
+            idx = 0
 
         prefix = f"{'Nivel' if lang == 'ES' else 'Level'} {idx + 1}: " if include_prefix else ""
 

@@ -6,7 +6,7 @@ import random
 import math
 from src.levels import LEVELS, Level
 from src.game_state import GameState
-from src.ui import UI, Button
+from src.ui import UI, Button, get_cached_font
 from src.executor import Executor
 from src.sound import sound_manager
 from src.editor import level_editor_screen, custom_dict_to_level, load_custom_levels
@@ -109,7 +109,7 @@ def load_progress():
     path = get_save_file_path()
     try:
         if os.path.exists(path):
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return set(data.get("completed_levels", []))
     except Exception as e:
@@ -119,7 +119,7 @@ def load_progress():
 def save_progress(completed_levels):
     path = get_save_file_path()
     try:
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump({"completed_levels": sorted(list(completed_levels))}, f, indent=2)
     except Exception as e:
         print(f"Failed to save progress: {e}")
@@ -703,9 +703,10 @@ def main_menu(screen, selected_char, assets, completed_levels):
         btn_next.draw(screen, mouse_pos)
 
         chap_name = t(f"world_{current_chapter + 1}")
+        clean_chap_name = chap_name.split('. ', 1)[-1] if '. ' in chap_name else chap_name
         chap_start = current_chapter * 20
         chap_done = sum(1 for lvl_i in range(chap_start, min(chap_start + 20, len(LEVELS))) if lvl_i in completed_levels)
-        chap_title_str = f"{t('chapter')} {current_chapter + 1}: {chap_name}   ({chap_done}/20"
+        chap_title_str = f"{t('chapter')} {current_chapter + 1}: {clean_chap_name}   ({chap_done}/20"
         title_surf = font_chap_title.render(chap_title_str, True, (0, 80, 0))
         star_w = star_icon.get_width() + 6 if star_icon else 10
         tot_w = title_surf.get_width() + star_w + 16
@@ -924,9 +925,11 @@ def main():
         char_info = CHARACTERS[selected_character]
         lvl_title = level.get_title(idx, selected_character, get_lang(), include_prefix=True) if hasattr(level, 'get_title') else getattr(level, 'name', '')
         pygame.display.set_caption(f"SavannaCode - {char_info['name']} - {lvl_title}")
+        prev_speed = executor.speed_mode if executor else "NORMAL"
         game_state = GameState(level)
         ui = UI(screen_w, screen_h)
         executor = Executor(game_state, ui)
+        executor.set_speed(prev_speed)
 
         # Dynamic layout: ensure bottom row and all borders are 100% visible above UI
         header_height = 76
@@ -1047,16 +1050,20 @@ def main():
                     IS_FULLSCREEN = not IS_FULLSCREEN
                     screen = get_screen()
                     refresh_ingame_headers()
+                    continue
                 if btn_ingame_lang.handle_event(event):
                     toggle_lang()
                     ui.refresh_labels()
                     refresh_ingame_headers()
+                    continue
                 if btn_ingame_speed.handle_event(event):
                     executor.toggle_speed()
                     refresh_ingame_headers()
+                    continue
                 if btn_ingame_mute.handle_event(event):
                     sound_manager.toggle_mute()
                     refresh_ingame_headers()
+                    continue
                 if btn_ingame_back.handle_event(event):
                     particles.clear()
                     state = "EDITOR" if (playing_custom and custom_from_editor) else "MENU"
@@ -1064,8 +1071,8 @@ def main():
                     transitioned = True
                     break
 
-                # Mouse click on victory / crash overlay acts like SPACE
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Mouse click on victory / crash overlay acts like SPACE (restricted to board area below header)
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and event.pos[1] > 76:
                     if game_state.state == "SUCCESS":
                         particles.clear()
                         if playing_custom:
@@ -1254,6 +1261,8 @@ def main():
                 elif game_state.state == "CRASH":
                     sound_manager.play_crash()
                     cx, cy = getattr(game_state, "crash_pos", (gx, gy))
+                    cx = max(0, min(level.width - 1, cx))
+                    cy = max(0, min(level.height - 1, cy))
                     c_px = offset_x + cx * tile_size + tile_size // 2
                     c_py = offset_y + cy * tile_size + tile_size // 2
                     obs_t = obstacle_types.get((cx, cy), "rock")
@@ -1300,7 +1309,7 @@ def main():
                 fit_f = header_title_font
                 while fit_f.size(lvl_name)[0] > avail_title_w and sz > 16:
                     sz -= 1
-                    fit_f = pygame.font.Font(None, sz)
+                    fit_f = get_cached_font(sz)
                 title_surf = fit_f.render(lvl_name, True, (15, 25, 35))
             else:
                 title_surf = header_title_font.render(lvl_name, True, (15, 25, 35))
