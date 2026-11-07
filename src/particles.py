@@ -100,6 +100,38 @@ class ParticleSystem:
             life = random.randint(30, 45)
             self.particles.append(Particle(center_x, center_y, vx, vy, color, rad, life, gravity=0.15, shape="circle"))
 
+    def add_otter_catch(self, center_x, center_y, count=28):
+        """Aqua bubbles and golden fish sparkles when otter catches the fish"""
+        splash_colors = [
+            (0, 191, 255),   # Deep Sky Blue
+            (135, 206, 250), # Light Sky Blue
+            (255, 165, 0),   # Golden Fish Orange
+            (255, 255, 255), # White Foam
+            (64, 224, 208)   # Turquoise
+        ]
+        for _ in range(count):
+            vx = random.uniform(-4.0, 4.0)
+            vy = random.uniform(-4.5, 1.5)
+            color = random.choice(splash_colors)
+            rad = random.uniform(2.5, 5.5)
+            life = random.randint(30, 50)
+            self.particles.append(Particle(center_x, center_y, vx, vy, color, rad, life, gravity=0.14, shape="circle"))
+
+    def add_water_ripple(self, x, y, direction=1):
+        """Small water wake droplets behind the otter when swimming"""
+        ripple_colors = [(135, 206, 250), (173, 216, 230), (224, 255, 255), (255, 255, 255)]
+        opp_dx = [0, -1, 0, 1][direction]
+        opp_dy = [1, 0, -1, 0][direction]
+        px = x + opp_dx * 12 + random.uniform(-5, 5)
+        py = y + opp_dy * 12 + random.uniform(-5, 5)
+        for _ in range(5):
+            vx = random.uniform(-1.1, 1.1) + opp_dx * 0.6
+            vy = random.uniform(-1.2, 0.4) + opp_dy * 0.6
+            color = random.choice(ripple_colors)
+            rad = random.uniform(2, 4)
+            life = random.randint(16, 26)
+            self.particles.append(Particle(px, py, vx, vy, color, rad, life, gravity=-0.01, shape="circle"))
+
     def add_dust_puff(self, x, y, direction=1):
         """Small dust puffs under feet when running"""
         dust_colors = [(210, 180, 140), (222, 184, 135), (245, 222, 179)]

@@ -4,7 +4,7 @@ import os
 import json
 import random
 import math
-from src.levels import LEVELS, Level
+from src.levels import LEVELS, OTTER_LEVELS, Level, get_levels_for_char
 from src.game_state import GameState
 from src.ui import UI, Button, get_cached_font
 from src.executor import Executor
@@ -12,6 +12,7 @@ from src.sound import sound_manager
 from src.editor import level_editor_screen, custom_dict_to_level, load_custom_levels
 from src.i18n import t, get_lang, set_lang, toggle_lang
 from src.particles import particles
+from src.otter_assets import load_or_generate_otter_assets
 
 TILE_SIZE = 80
 UI_HEIGHT = 150
@@ -30,8 +31,7 @@ def get_screen():
     return pygame.display.set_mode((LOGICAL_WIDTH, LOGICAL_HEIGHT), flags)
 
 def get_char_info(char_key):
-    is_giraffe = (char_key == "giraffe")
-    if is_giraffe:
+    if char_key == "giraffe":
         return {
             "name": "Giraffe" if get_lang() == "EN" else "Jirafa",
             "emoji": "🦒",
@@ -43,6 +43,19 @@ def get_char_info(char_key):
             "btn_hover": (150, 255, 150),
             "theme_color": (34, 139, 34),
             "desc": "Guide the giraffe to the acacia leaves!" if get_lang() == "EN" else "¡Guía a la jirafa hacia las hojas!"
+        }
+    elif char_key == "otter":
+        return {
+            "name": "Otter" if get_lang() == "EN" else "Nutria",
+            "emoji": "🦦",
+            "character_sprite": "otter",
+            "target_sprite": "fish",
+            "target_name": "River Fish" if get_lang() == "EN" else "Pez de Río",
+            "win_text": t("win_otter"),
+            "btn_color": (70, 190, 245),
+            "btn_hover": (120, 215, 255),
+            "theme_color": (0, 115, 175),
+            "desc": "Swim through the water to catch the fish!" if get_lang() == "EN" else "¡Nada por el agua para atrapar el pez!"
         }
     else:
         return {
@@ -62,17 +75,22 @@ class CharacterDict(dict):
     def __getitem__(self, key):
         return get_char_info(key)
     def get(self, key, default=None):
-        if key in ("giraffe", "cheetah"):
+        if key in ("giraffe", "cheetah", "otter"):
             return get_char_info(key)
         return default
 
-CHARACTERS = CharacterDict({"giraffe": None, "cheetah": None})
+CHARACTERS = CharacterDict({"giraffe": None, "cheetah": None, "otter": None})
 def get_base_data_dir():
     r"""
     Returns directory where user data/saves should persist.
+    - If Android: saves in ANDROID_PRIVATE app data directory.
     - If portable/dev: saves in project or executable directory if writable.
     - If installed in read-only location (e.g. C:\Program Files): saves in %APPDATA%\SavannaCode.
     """
+    android_data = os.environ.get("ANDROID_PRIVATE") or os.environ.get("ANDROID_ARGUMENT")
+    if android_data and os.path.exists(android_data):
+        return android_data
+
     if getattr(sys, "frozen", False):
         exe_dir = os.path.dirname(sys.executable)
         test_file = os.path.join(exe_dir, ".perm_test")
@@ -92,7 +110,12 @@ def get_base_data_dir():
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def get_resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller"""
+    """Get absolute path to resource, works for dev, PyInstaller, and Android."""
+    android_app = os.environ.get("ANDROID_APP_PATH") or os.environ.get("ANDROID_ARGUMENT")
+    if android_app:
+        candidate = os.path.join(android_app, relative_path)
+        if os.path.exists(candidate):
+            return candidate
     try:
         base_path = sys._MEIPASS
     except Exception:
@@ -105,35 +128,72 @@ def get_save_file_path():
     except Exception:
         return "progress.json"
 
-def load_progress():
+def load_progress(char_key="giraffe"):
     path = get_save_file_path()
+    key = "completed_levels_otter" if char_key == "otter" else "completed_levels"
     try:
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return set(data.get("completed_levels", []))
+                return set(data.get(key, []))
     except Exception as e:
         print(f"Failed to load progress: {e}")
     return set()
 
-def save_progress(completed_levels):
+def save_progress(completed_levels, char_key="giraffe"):
     path = get_save_file_path()
+    key = "completed_levels_otter" if char_key == "otter" else "completed_levels"
     try:
+        data = {}
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        data = loaded
+            except Exception:
+                data = {}
+        data[key] = sorted(list(completed_levels))
         with open(path, "w", encoding="utf-8") as f:
-            json.dump({"completed_levels": sorted(list(completed_levels))}, f, indent=2)
+            json.dump(data, f, indent=2)
     except Exception as e:
         print(f"Failed to save progress: {e}")
 
-def generate_terrain(level, level_idx):
+def generate_terrain(level, level_idx, is_aquatic=False):
     """
-    Deterministically generates a realistic savanna terrain distribution:
-    - Water obstacles cluster into natural ponds / riverbeds.
-    - Mud / dirt clusters around water banks and forms subtle animal trails.
-    - Golden dry savanna grass forms natural sunlit patches.
-    - Lush green grass forms the dominant background.
+    Deterministically generates terrain distribution:
+    - Terrestrial (Giraffe / Cheetah): grass/dry/dirt walkable ground with rock and water obstacles.
+    - Aquatic (Otter): water walkable channels with grassy/sandy land banks and river rock obstacles.
     """
     seed = (level_idx + 1) * 7919 + level.width * 313 + level.height * 1009 + level.start_x * 47 + level.goal_y * 89
     rng = random.Random(seed)
+
+    if is_aquatic or getattr(level, "habitat", "land") == "water":
+        obstacle_types = {}
+        if level.obstacles:
+            rock_anchor = rng.choice(level.obstacles)
+            for (ox, oy) in level.obstacles:
+                on_border = (ox == 0 or oy == 0 or ox == level.width - 1 or oy == level.height - 1)
+                d_rock = math.hypot(ox - rock_anchor[0], oy - rock_anchor[1])
+                if on_border and rng.random() < 0.82:
+                    obstacle_types[(ox, oy)] = "land" if rng.random() < 0.78 else "dirt"
+                elif d_rock <= 1.8 and rng.random() < 0.65:
+                    obstacle_types[(ox, oy)] = "rock"
+                else:
+                    r_val = rng.random()
+                    if r_val < 0.58:
+                        obstacle_types[(ox, oy)] = "land"
+                    elif r_val < 0.74:
+                        obstacle_types[(ox, oy)] = "dirt"
+                    else:
+                        obstacle_types[(ox, oy)] = "rock"
+
+        ground_types = {}
+        for y in range(level.height):
+            for x in range(level.width):
+                if (x, y) not in obstacle_types:
+                    ground_types[(x, y)] = "water"
+        return obstacle_types, ground_types
 
     # 1. Obstacle types: cluster water together into natural ponds / creeks
     obstacle_types = {}
@@ -206,56 +266,89 @@ def generate_terrain(level, level_idx):
 
     return obstacle_types, ground_types
 
-def draw_grid(surface, level, offset_x, offset_y, tile_size, assets, obstacle_types, ground_types, target_sprite="tree"):
+def draw_grid(surface, level, offset_x, offset_y, tile_size, assets, obstacle_types, ground_types, target_sprite="tree", is_aquatic=False):
+    aquatic_mode = is_aquatic or getattr(level, "habitat", "land") == "water"
     # Draw background grid
     for y in range(level.height):
         for x in range(level.width):
             rect = pygame.Rect(offset_x + x * tile_size, offset_y + y * tile_size, tile_size, tile_size)
 
-            # Ground texture
-            g_type = ground_types.get((x, y), "grass")
-            if g_type == "dry" and assets.get("grass_dry"):
-                grass_img = assets["grass_dry"]
-            elif g_type == "dirt" and assets.get("grass_dirt"):
-                grass_img = assets["grass_dirt"]
-            else:
-                grass_img = assets.get("grass")
-
-            if grass_img:
-                surface.blit(grass_img, rect)
-            else:
-                pygame.draw.rect(surface, (200, 255, 200), rect)
-
-            # Obstacles
-            if (x, y) in level.obstacles:
-                obs_type = obstacle_types.get((x, y), "rock")
-                if obs_type == "water" and assets.get("water"):
+            if aquatic_mode:
+                # Base water channel
+                if assets.get("water"):
                     surface.blit(assets["water"], rect)
-                elif assets.get("rock"):
-                    rock_rect = assets["rock"].get_rect(center=rect.center)
-                    surface.blit(assets["rock"], rock_rect)
                 else:
-                    color = (50, 100, 200) if obs_type == "water" else (150, 150, 150)
-                    pygame.draw.rect(surface, color, rect)
+                    pygame.draw.rect(surface, (50, 130, 220), rect)
 
-            # Goal
-            elif x == level.goal_x and y == level.goal_y:
-                target_img = assets.get(target_sprite) or assets.get("tree")
-                if target_img:
-                    target_rect = target_img.get_rect(center=rect.center)
-                    surface.blit(target_img, target_rect)
+                # Obstacles in aquatic mode: Land banks (grass/dirt) or River Rocks
+                if (x, y) in level.obstacles:
+                    obs_type = obstacle_types.get((x, y), "land")
+                    if obs_type == "dirt" and assets.get("grass_dirt"):
+                        surface.blit(assets["grass_dirt"], rect)
+                        pygame.draw.rect(surface, (140, 120, 80), rect, 2)
+                    elif obs_type in ("land", "water", "grass") and assets.get("grass"):
+                        surface.blit(assets["grass"], rect)
+                        pygame.draw.rect(surface, (85, 155, 85), rect, 2)
+                    elif assets.get("rock"):
+                        rock_rect = assets["rock"].get_rect(center=rect.center)
+                        surface.blit(assets["rock"], rock_rect)
+                    else:
+                        color = (110, 180, 100) if obs_type in ("land", "grass") else (140, 140, 140)
+                        pygame.draw.rect(surface, color, rect)
+                elif x == level.goal_x and y == level.goal_y:
+                    target_img = assets.get(target_sprite) or assets.get("fish") or assets.get("tree")
+                    if target_img:
+                        target_rect = target_img.get_rect(center=rect.center)
+                        surface.blit(target_img, target_rect)
+                    else:
+                        pygame.draw.circle(surface, (255, 165, 0), rect.center, tile_size // 3)
+
+                pygame.draw.rect(surface, (70, 150, 210), rect, 2)
+            else:
+                # Ground texture
+                g_type = ground_types.get((x, y), "grass")
+                if g_type == "dry" and assets.get("grass_dry"):
+                    grass_img = assets["grass_dry"]
+                elif g_type == "dirt" and assets.get("grass_dirt"):
+                    grass_img = assets["grass_dirt"]
                 else:
-                    pygame.draw.circle(surface, (50, 200, 50), rect.center, tile_size // 3)
+                    grass_img = assets.get("grass")
 
-            pygame.draw.rect(surface, (150, 200, 150), rect, 2) # Grid lines
+                if grass_img:
+                    surface.blit(grass_img, rect)
+                else:
+                    pygame.draw.rect(surface, (200, 255, 200), rect)
+
+                # Obstacles
+                if (x, y) in level.obstacles:
+                    obs_type = obstacle_types.get((x, y), "rock")
+                    if obs_type == "water" and assets.get("water"):
+                        surface.blit(assets["water"], rect)
+                    elif assets.get("rock"):
+                        rock_rect = assets["rock"].get_rect(center=rect.center)
+                        surface.blit(assets["rock"], rock_rect)
+                    else:
+                        color = (50, 100, 200) if obs_type == "water" else (150, 150, 150)
+                        pygame.draw.rect(surface, color, rect)
+
+                # Goal
+                elif x == level.goal_x and y == level.goal_y:
+                    target_img = assets.get(target_sprite) or assets.get("tree")
+                    if target_img:
+                        target_rect = target_img.get_rect(center=rect.center)
+                        surface.blit(target_img, target_rect)
+                    else:
+                        pygame.draw.circle(surface, (50, 200, 50), rect.center, tile_size // 3)
+
+                pygame.draw.rect(surface, (150, 200, 150), rect, 2) # Grid lines
 def character_select_menu(screen, assets):
-    """Start menu screen to choose between Giraffe and Cheetah"""
+    """Start menu screen to choose between Giraffe, Cheetah, and Otter"""
     global IS_FULLSCREEN
     clock = pygame.time.Clock()
-    font_title = pygame.font.Font(None, 62)
-    font_sub = pygame.font.Font(None, 32)
-    font_card_title = pygame.font.Font(None, 42)
-    font_card_desc = pygame.font.Font(None, 24)
+    font_title = pygame.font.Font(None, 52)
+    font_sub = pygame.font.Font(None, 30)
+    font_card_title = pygame.font.Font(None, 38)
+    font_card_desc = pygame.font.Font(None, 22)
     bg_image = None
     try:
         raw_bg = assets.get("menu_bg_raw")
@@ -263,34 +356,47 @@ def character_select_menu(screen, assets):
             bg_image = pygame.transform.scale(raw_bg, screen.get_size())
     except Exception:
         pass
-    card_w, card_h = 340, 420
-    gap = 50
-    tot_cards_w = 2 * card_w + gap
+    card_w, card_h = 285, 420
+    gap = 26
+    tot_cards_w = 3 * card_w + 2 * gap
     start_x = (screen.get_width() - tot_cards_w) // 2
-    card1_rect = pygame.Rect(start_x, 155, card_w, card_h)
-    card2_rect = pygame.Rect(start_x + card_w + gap, 155, card_w, card_h)
+    card1_rect = pygame.Rect(start_x, 160, card_w, card_h)
+    card2_rect = pygame.Rect(start_x + card_w + gap, 160, card_w, card_h)
+    card3_rect = pygame.Rect(start_x + 2 * (card_w + gap), 160, card_w, card_h)
 
-    btn_fs = Button(screen.get_width() - 110, 20, 95, 36,
+    btn_fs = Button(screen.get_width() - 110, 12, 95, 34,
                     t("windowed") if IS_FULLSCREEN else t("fullscreen"),
                     (110, 160, 255), (160, 205, 255), "TOGGLE_FS", font_size=20)
-    btn_lang = Button(btn_fs.rect.left - 8 - 56, 20, 56, 36, get_lang(),
+    btn_lang = Button(btn_fs.rect.left - 8 - 56, 12, 56, 34, get_lang(),
                       (190, 225, 255), (220, 240, 255), "TOGGLE_LANG", font_size=20)
-    btn_mute = Button(btn_lang.rect.left - 8 - 110, 20, 110, 36,
+    btn_mute = Button(btn_lang.rect.left - 8 - 110, 12, 110, 34,
                       t("sound_off") if sound_manager.is_muted else t("sound_on"),
                       (255, 180, 180) if sound_manager.is_muted else (210, 240, 210),
                       (255, 205, 205) if sound_manager.is_muted else (230, 250, 230),
                       "TOGGLE_MUTE", font_size=20)
 
-    btn1 = Button(card1_rect.x + 30, card1_rect.bottom - 65, card_w - 60, 48, 
-                  t("card_btn_giraffe"), (100, 230, 100), (160, 255, 160), "giraffe", font_size=26)
-    btn2 = Button(card2_rect.x + 30, card2_rect.bottom - 65, card_w - 60, 48, 
-                  t("card_btn_cheetah"), (255, 170, 50), (255, 210, 110), "cheetah", font_size=26)
-    preview_giraffe = pygame.transform.scale(assets["giraffe"], (110, 110)) if assets.get("giraffe") else None
-    preview_tree = pygame.transform.scale(assets["tree"], (90, 90)) if assets.get("tree") else None
-    preview_cheetah = pygame.transform.scale(assets["cheetah"], (110, 110)) if assets.get("cheetah") else None
-    preview_gazelle = pygame.transform.scale(assets["gazelle"], (90, 90)) if assets.get("gazelle") else None
+    btn1 = Button(card1_rect.x + 22, card1_rect.bottom - 65, card_w - 44, 48, 
+                  t("card_btn_giraffe"), (100, 230, 100), (160, 255, 160), "giraffe", font_size=24)
+    btn2 = Button(card2_rect.x + 22, card2_rect.bottom - 65, card_w - 44, 48, 
+                  t("card_btn_cheetah"), (255, 170, 50), (255, 210, 110), "cheetah", font_size=24)
+    btn3 = Button(card3_rect.x + 22, card3_rect.bottom - 65, card_w - 44, 48, 
+                  t("card_btn_otter"), (70, 190, 245), (125, 215, 255), "otter", font_size=24)
+    preview_giraffe = pygame.transform.scale(assets["giraffe"], (96, 96)) if assets.get("giraffe") else None
+    preview_tree = pygame.transform.scale(assets["tree"], (80, 80)) if assets.get("tree") else None
+    preview_cheetah = pygame.transform.scale(assets["cheetah"], (96, 96)) if assets.get("cheetah") else None
+    preview_gazelle = pygame.transform.scale(assets["gazelle"], (80, 80)) if assets.get("gazelle") else None
+    preview_otter = pygame.transform.scale(assets["otter"], (96, 96)) if assets.get("otter") else None
+    preview_fish = pygame.transform.scale(assets["fish"], (80, 80)) if assets.get("fish") else None
     menu_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
     menu_overlay.fill((255, 255, 255, 140))
+
+    def render_fitted_desc(text, color, max_w):
+        sz = 22
+        f = get_cached_font(sz)
+        while f.size(text)[0] > max_w and sz > 13:
+            sz -= 1
+            f = get_cached_font(sz)
+        return f.render(text, True, color)
 
     def reposition_char_elements():
         scr_w = screen.get_width()
@@ -300,8 +406,10 @@ def character_select_menu(screen, assets):
         s_x = (scr_w - tot_cards_w) // 2
         card1_rect.x = s_x
         card2_rect.x = s_x + card_w + gap
-        btn1.rect.x = card1_rect.x + 30
-        btn2.rect.x = card2_rect.x + 30
+        card3_rect.x = s_x + 2 * (card_w + gap)
+        btn1.rect.x = card1_rect.x + 22
+        btn2.rect.x = card2_rect.x + 22
+        btn3.rect.x = card3_rect.x + 22
 
     def refresh_char_texts():
         btn_fs.text = t("windowed") if IS_FULLSCREEN else t("fullscreen")
@@ -310,6 +418,7 @@ def character_select_menu(screen, assets):
         btn_mute.color = (255, 180, 180) if sound_manager.is_muted else (210, 240, 210)
         btn1.text = t("card_btn_giraffe")
         btn2.text = t("card_btn_cheetah")
+        btn3.text = t("card_btn_otter")
 
     while True:
         mouse_pos = pygame.mouse.get_pos()
@@ -365,6 +474,10 @@ def character_select_menu(screen, assets):
             if action2:
                 sound_manager.play_click()
                 return action2
+            action3 = btn3.handle_event(event)
+            if action3:
+                sound_manager.play_click()
+                return action3
 
             # Allow clicking anywhere on the cards
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -374,6 +487,9 @@ def character_select_menu(screen, assets):
                 elif card2_rect.collidepoint(event.pos):
                     sound_manager.play_click()
                     return "cheetah"
+                elif card3_rect.collidepoint(event.pos):
+                    sound_manager.play_click()
+                    return "otter"
 
         # Background
         if bg_image:
@@ -384,12 +500,12 @@ def character_select_menu(screen, assets):
 
         # Header
         title = font_title.render(t("choose_hero_title"), True, (0, 90, 0))
-        title_rect = title.get_rect(center=(screen.get_width() // 2, 60))
-        pygame.draw.rect(screen, (255, 255, 255), title_rect.inflate(40, 20), border_radius=12)
-        pygame.draw.rect(screen, (0, 110, 0), title_rect.inflate(40, 20), 4, border_radius=12)
+        title_rect = title.get_rect(center=(screen.get_width() // 2, 78))
+        pygame.draw.rect(screen, (255, 255, 255), title_rect.inflate(36, 16), border_radius=12)
+        pygame.draw.rect(screen, (0, 110, 0), title_rect.inflate(36, 16), 4, border_radius=12)
         screen.blit(title, title_rect)
         subtitle = font_sub.render(t("choose_hero_sub"), True, (40, 40, 40))
-        sub_rect = subtitle.get_rect(center=(screen.get_width() // 2, 112))
+        sub_rect = subtitle.get_rect(center=(screen.get_width() // 2, 126))
         screen.blit(subtitle, sub_rect)
 
         # Header buttons
@@ -406,7 +522,7 @@ def character_select_menu(screen, assets):
         t1 = font_card_title.render(t("hero_giraffe"), True, (0, 120, 0))
         emoji_g = assets.get("emoji_giraffe")
         if emoji_g:
-            e1 = pygame.transform.scale(emoji_g, (32, 32))
+            e1 = pygame.transform.scale(emoji_g, (30, 30))
             tot_w = t1.get_width() + e1.get_width() + 8
             sx = card1_rect.centerx - tot_w // 2
             screen.blit(e1, (sx, card1_rect.y + 20))
@@ -414,13 +530,13 @@ def character_select_menu(screen, assets):
         else:
             screen.blit(t1, (card1_rect.centerx - t1.get_width() // 2, card1_rect.y + 20))
         if preview_giraffe and preview_tree:
-            screen.blit(preview_giraffe, (card1_rect.x + 40, card1_rect.y + 85))
-            arr_x = card1_rect.x + 170
-            arr_y = card1_rect.y + 140
+            screen.blit(preview_giraffe, (card1_rect.x + 26, card1_rect.y + 88))
+            arr_x = card1_rect.centerx
+            arr_y = card1_rect.y + 138
             pygame.draw.polygon(screen, (0, 160, 0), [(arr_x - 8, arr_y - 10), (arr_x + 8, arr_y), (arr_x - 8, arr_y + 10)])
-            screen.blit(preview_tree, (card1_rect.x + 200, card1_rect.y + 95))
-        desc1_a = font_card_desc.render(t("card_goal_giraffe"), True, (40, 80, 40))
-        desc1_b = font_card_desc.render(t("card_desc_giraffe"), True, (80, 80, 80))
+            screen.blit(preview_tree, (card1_rect.right - 26 - 80, card1_rect.y + 96))
+        desc1_a = render_fitted_desc(t("card_goal_giraffe"), (40, 80, 40), card_w - 20)
+        desc1_b = render_fitted_desc(t("card_desc_giraffe"), (80, 80, 80), card_w - 20)
         screen.blit(desc1_a, (card1_rect.centerx - desc1_a.get_width() // 2, card1_rect.y + 245))
         screen.blit(desc1_b, (card1_rect.centerx - desc1_b.get_width() // 2, card1_rect.y + 278))
         btn1.draw(screen, mouse_pos)
@@ -434,7 +550,7 @@ def character_select_menu(screen, assets):
         t2 = font_card_title.render(t("hero_cheetah"), True, (200, 80, 0))
         emoji_c = assets.get("emoji_cheetah")
         if emoji_c:
-            e2 = pygame.transform.scale(emoji_c, (32, 32))
+            e2 = pygame.transform.scale(emoji_c, (30, 30))
             tot_w = t2.get_width() + e2.get_width() + 8
             sx = card2_rect.centerx - tot_w // 2
             screen.blit(e2, (sx, card2_rect.y + 20))
@@ -442,21 +558,50 @@ def character_select_menu(screen, assets):
         else:
             screen.blit(t2, (card2_rect.centerx - t2.get_width() // 2, card2_rect.y + 20))
         if preview_cheetah and preview_gazelle:
-            screen.blit(preview_cheetah, (card2_rect.x + 40, card2_rect.y + 85))
-            arr_x = card2_rect.x + 170
-            arr_y = card2_rect.y + 140
+            screen.blit(preview_cheetah, (card2_rect.x + 26, card2_rect.y + 88))
+            arr_x = card2_rect.centerx
+            arr_y = card2_rect.y + 138
             pygame.draw.polygon(screen, (220, 100, 0), [(arr_x - 8, arr_y - 10), (arr_x + 8, arr_y), (arr_x - 8, arr_y + 10)])
-            screen.blit(preview_gazelle, (card2_rect.x + 200, card2_rect.y + 95))
-        desc2_a = font_card_desc.render(t("card_goal_cheetah"), True, (120, 50, 0))
-        desc2_b = font_card_desc.render(t("card_desc_cheetah"), True, (80, 80, 80))
+            screen.blit(preview_gazelle, (card2_rect.right - 26 - 80, card2_rect.y + 96))
+        desc2_a = render_fitted_desc(t("card_goal_cheetah"), (120, 50, 0), card_w - 20)
+        desc2_b = render_fitted_desc(t("card_desc_cheetah"), (80, 80, 80), card_w - 20)
         screen.blit(desc2_a, (card2_rect.centerx - desc2_a.get_width() // 2, card2_rect.y + 245))
         screen.blit(desc2_b, (card2_rect.centerx - desc2_b.get_width() // 2, card2_rect.y + 278))
         btn2.draw(screen, mouse_pos)
+
+        # Draw Card 3: Otter
+        hover3 = card3_rect.collidepoint(mouse_pos)
+        c3_bg = (235, 250, 255) if hover3 else (255, 255, 255)
+        c3_border = (0, 140, 210) if hover3 else (170, 215, 235)
+        pygame.draw.rect(screen, c3_bg, card3_rect, border_radius=16)
+        pygame.draw.rect(screen, c3_border, card3_rect, 4 if hover3 else 2, border_radius=16)
+        t3 = font_card_title.render(t("hero_otter"), True, (0, 115, 175))
+        emoji_o = assets.get("emoji_otter")
+        if emoji_o:
+            e3 = pygame.transform.scale(emoji_o, (30, 30))
+            tot_w = t3.get_width() + e3.get_width() + 8
+            sx = card3_rect.centerx - tot_w // 2
+            screen.blit(e3, (sx, card3_rect.y + 20))
+            screen.blit(t3, (sx + e3.get_width() + 8, card3_rect.y + 22))
+        else:
+            screen.blit(t3, (card3_rect.centerx - t3.get_width() // 2, card3_rect.y + 20))
+        if preview_otter and preview_fish:
+            screen.blit(preview_otter, (card3_rect.x + 26, card3_rect.y + 88))
+            arr_x = card3_rect.centerx
+            arr_y = card3_rect.y + 138
+            pygame.draw.polygon(screen, (0, 140, 210), [(arr_x - 8, arr_y - 10), (arr_x + 8, arr_y), (arr_x - 8, arr_y + 10)])
+            screen.blit(preview_fish, (card3_rect.right - 26 - 80, card3_rect.y + 96))
+        desc3_a = render_fitted_desc(t("card_goal_otter"), (0, 95, 150), card_w - 20)
+        desc3_b = render_fitted_desc(t("card_desc_otter"), (80, 80, 80), card_w - 20)
+        screen.blit(desc3_a, (card3_rect.centerx - desc3_a.get_width() // 2, card3_rect.y + 245))
+        screen.blit(desc3_b, (card3_rect.centerx - desc3_b.get_width() // 2, card3_rect.y + 278))
+        btn3.draw(screen, mouse_pos)
         pygame.display.flip()
         clock.tick(60)
 def main_menu(screen, selected_char, assets, completed_levels):
     global IS_FULLSCREEN
     
+    active_levels = get_levels_for_char(selected_char)
     char_info = CHARACTERS.get(selected_char, CHARACTERS["giraffe"])
     font_title = pygame.font.Font(None, 52)
     font_sub = pygame.font.Font(None, 24)
@@ -513,7 +658,7 @@ def main_menu(screen, selected_char, assets, completed_levels):
 
     # Start at chapter of first uncompleted level
     current_chapter = 0
-    for i in range(len(LEVELS)):
+    for i in range(len(active_levels)):
         if i not in completed_levels:
             current_chapter = i // 20
             break
@@ -556,7 +701,10 @@ def main_menu(screen, selected_char, assets, completed_levels):
                 btn_next.rect.x = screen.get_width() - 150
                 refresh_menu_texts()
             elif event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_LEFT, pygame.K_PAGEUP):
+                if event.key in (pygame.K_ESCAPE, getattr(pygame, "K_AC_BACK", -999)):
+                    pygame.quit()
+                    sys.exit()
+                elif event.key in (pygame.K_LEFT, pygame.K_PAGEUP):
                     current_chapter = (current_chapter - 1) % 10
                     sound_manager.play_click()
                 elif event.key in (pygame.K_RIGHT, pygame.K_PAGEDOWN):
@@ -638,7 +786,7 @@ def main_menu(screen, selected_char, assets, completed_levels):
                         if card_rect.collidepoint(event.pos):
                             slot_idx = r * 5 + c
                             lvl_idx = current_chapter * 20 + slot_idx
-                            if lvl_idx < len(LEVELS):
+                            if lvl_idx < len(active_levels):
                                 sound_manager.play_click()
                                 return lvl_idx
 
@@ -676,14 +824,19 @@ def main_menu(screen, selected_char, assets, completed_levels):
         screen.blit(s2, (cx, badge_y))
         cx += s2.get_width() + 4
 
-        target_emoji_key = "emoji_leaf" if selected_char == "giraffe" else "emoji_gazelle"
+        if selected_char == "otter":
+            target_emoji_key = "emoji_fish"
+        elif selected_char == "giraffe":
+            target_emoji_key = "emoji_leaf"
+        else:
+            target_emoji_key = "emoji_gazelle"
         target_emoji_img = assets.get(target_emoji_key)
         if target_emoji_img:
             mini_target = pygame.transform.scale(target_emoji_img, (22, 22))
             screen.blit(mini_target, (cx, badge_y - 2))
             cx += mini_target.get_width() + 6
 
-        s3 = font_sub.render(f"{char_info['target_name']}   |   {t('completed')}{len(completed_levels)}/{len(LEVELS)} ", True, (70, 70, 70))
+        s3 = font_sub.render(f"{char_info['target_name']}   |   {t('completed')}{len(completed_levels)}/{len(active_levels)} ", True, (70, 70, 70))
         screen.blit(s3, (cx, badge_y))
         cx += s3.get_width() + 4
 
@@ -702,24 +855,26 @@ def main_menu(screen, selected_char, assets, completed_levels):
         btn_prev.draw(screen, mouse_pos)
         btn_next.draw(screen, mouse_pos)
 
-        chap_name = t(f"world_{current_chapter + 1}")
+        chap_key = f"otter_world_{current_chapter + 1}" if selected_char == "otter" else f"world_{current_chapter + 1}"
+        chap_name = t(chap_key)
         clean_chap_name = chap_name.split('. ', 1)[-1] if '. ' in chap_name else chap_name
         chap_start = current_chapter * 20
-        chap_done = sum(1 for lvl_i in range(chap_start, min(chap_start + 20, len(LEVELS))) if lvl_i in completed_levels)
+        chap_done = sum(1 for lvl_i in range(chap_start, min(chap_start + 20, len(active_levels))) if lvl_i in completed_levels)
         chap_title_str = f"{t('chapter')} {current_chapter + 1}: {clean_chap_name}   ({chap_done}/20"
-        title_surf = font_chap_title.render(chap_title_str, True, (0, 80, 0))
+        chap_col = (0, 85, 140) if selected_char == "otter" else (0, 80, 0)
+        title_surf = font_chap_title.render(chap_title_str, True, chap_col)
         star_w = star_icon.get_width() + 6 if star_icon else 10
         tot_w = title_surf.get_width() + star_w + 16
         chap_rect = pygame.Rect(screen.get_width() // 2 - tot_w // 2, 148, tot_w, 38)
         pygame.draw.rect(screen, (255, 255, 255), chap_rect, border_radius=8)
-        pygame.draw.rect(screen, (100, 160, 100), chap_rect, 2, border_radius=8)
+        pygame.draw.rect(screen, (80, 155, 205) if selected_char == "otter" else (100, 160, 100), chap_rect, 2, border_radius=8)
         screen.blit(title_surf, (chap_rect.x + 10, chap_rect.y + 9))
         if star_icon:
             screen.blit(star_icon, (chap_rect.x + 10 + title_surf.get_width() + 4, chap_rect.y + 7))
             close_x = chap_rect.x + 10 + title_surf.get_width() + 4 + star_icon.get_width()
         else:
             close_x = chap_rect.x + 10 + title_surf.get_width() + 2
-        close_paren = font_chap_title.render(")", True, (0, 80, 0))
+        close_paren = font_chap_title.render(")", True, chap_col)
         screen.blit(close_paren, (close_x, chap_rect.y + 9))
 
         # Level Grid (5 columns x 4 rows)
@@ -729,9 +884,9 @@ def main_menu(screen, selected_char, assets, completed_levels):
             for c in range(5):
                 slot_idx = r * 5 + c
                 lvl_idx = current_chapter * 20 + slot_idx
-                if lvl_idx >= len(LEVELS):
+                if lvl_idx >= len(active_levels):
                     continue
-                lvl = LEVELS[lvl_idx]
+                lvl = active_levels[lvl_idx]
                 lvl_name = lvl.get_title(lvl_idx, selected_char, get_lang(), include_prefix=False) if hasattr(lvl, "get_title") else (lvl.name_giraffe if selected_char == "giraffe" else lvl.name_cheetah)
                 is_done = lvl_idx in completed_levels
 
@@ -743,18 +898,28 @@ def main_menu(screen, selected_char, assets, completed_levels):
                     c_border = (230, 160, 0) if hover else (210, 160, 20)
                 else:
                     if hover:
-                        c_bg = (240, 255, 240) if selected_char == "giraffe" else (255, 246, 235)
+                        if selected_char == "otter":
+                            c_bg = (235, 250, 255)
+                        elif selected_char == "giraffe":
+                            c_bg = (240, 255, 240)
+                        else:
+                            c_bg = (255, 246, 235)
                         c_border = char_info["theme_color"]
                     else:
                         c_bg = (255, 255, 255)
-                        c_border = (190, 210, 190)
+                        c_border = (175, 205, 225) if selected_char == "otter" else (190, 210, 190)
 
                 pygame.draw.rect(screen, c_bg, card_rect, border_radius=10)
                 pygame.draw.rect(screen, c_border, card_rect, 3 if hover else 2, border_radius=10)
 
                 # Number badge
                 num_text = f"{t('level_title')} {lvl_idx + 1}"
-                num_col = (0, 110, 0) if selected_char == "giraffe" else (190, 80, 0)
+                if selected_char == "otter":
+                    num_col = (0, 110, 175)
+                elif selected_char == "giraffe":
+                    num_col = (0, 110, 0)
+                else:
+                    num_col = (190, 80, 0)
                 num_surf = font_card_num.render(num_text, True, num_col)
                 screen.blit(num_surf, (card_rect.x + 12, card_rect.y + 12))
 
@@ -780,7 +945,12 @@ def main_menu(screen, selected_char, assets, completed_levels):
             p_hover = p_rect.collidepoint(mouse_pos)
             if is_cur:
                 p_bg = char_info["theme_color"]
-                p_bd = (0, 60, 0) if selected_char == "giraffe" else (150, 50, 0)
+                if selected_char == "otter":
+                    p_bd = (0, 65, 110)
+                elif selected_char == "giraffe":
+                    p_bd = (0, 60, 0)
+                else:
+                    p_bd = (150, 50, 0)
                 txt_col = (255, 255, 255)
             else:
                 p_bg = (240, 245, 240) if p_hover else (255, 255, 255)
@@ -804,7 +974,7 @@ def main():
     # Initialize display FIRST so we can use .convert() on images
     
     screen = get_screen()
-    pygame.display.set_caption("SavannaCode: Giraffe & Cheetah")
+    pygame.display.set_caption("SavannaCode: Giraffe, Cheetah & Otter")
     try:
         icon_path = get_resource_path(os.path.join("assets", "icon.png"))
         app_icon = pygame.image.load(icon_path)
@@ -854,6 +1024,7 @@ def main():
     assets["emoji_custom"] = load_image("emoji_custom.png")
     assets["emoji_save"] = load_image("emoji_save.png")
     assets["emoji_play"] = load_image("emoji_play.png")
+    assets.update(load_or_generate_otter_assets(get_resource_path("assets"), load_image))
 
     assets_cache = {}
     def get_scaled_assets(tile_size):
@@ -914,7 +1085,8 @@ def main():
             idx = 0
         else:
             idx = idx_or_level
-            level = LEVELS[idx]
+            active_levels = get_levels_for_char(selected_character)
+            level = active_levels[idx]
             playing_custom = False
             custom_level_obj = None
             custom_total_count = 0
@@ -953,6 +1125,7 @@ def main():
         offset_x = (LOGICAL_WIDTH - grid_w) // 2
         offset_y = board_top + (avail_h - grid_h) // 2
 
+        is_aquatic = (selected_character == "otter" or getattr(level, "habitat", "land") == "water")
         if playing_custom:
             obstacle_types = {}
             if getattr(level, 'obstacle_types', None):
@@ -962,12 +1135,16 @@ def main():
                         obstacle_types[(int(parts[0]), int(parts[1]))] = v
                     elif isinstance(k, tuple):
                         obstacle_types[k] = v
+            default_obs = "land" if is_aquatic else "rock"
             for o in level.obstacles:
                 if tuple(o) not in obstacle_types:
-                    obstacle_types[tuple(o)] = "rock"
-            ground_types = {}
+                    obstacle_types[tuple(o)] = default_obs
+            if is_aquatic:
+                ground_types = {(x, y): "water" for y in range(level.height) for x in range(level.width) if (x, y) not in obstacle_types}
+            else:
+                ground_types = {}
         else:
-            obstacle_types, ground_types = generate_terrain(level, idx)
+            obstacle_types, ground_types = generate_terrain(level, idx, is_aquatic=is_aquatic)
 
         level_assets = get_scaled_assets(tile_size)
         particles.clear()
@@ -983,7 +1160,7 @@ def main():
     success_overlay.fill((0, 255, 0, 50))
     crash_overlay = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
     crash_overlay.fill((255, 0, 0, 50))
-    completed_levels = load_progress()
+    completed_levels = load_progress(selected_character)
     # Level variables
     level = game_state = ui = executor = offset_x = offset_y = tile_size = level_assets = obstacle_types = ground_types = last_player_pos = None
     last_game_state = "IDLE"
@@ -991,6 +1168,7 @@ def main():
         screen = pygame.display.get_surface()
         if state == "CHAR_SELECT":
             selected_character = character_select_menu(screen, assets)
+            completed_levels = load_progress(selected_character)
             state = "MENU"
             continue
         elif state == "MENU":
@@ -1089,7 +1267,7 @@ def main():
                                     refresh_ingame_headers()
                                 else:
                                     state = "MENU"
-                        elif current_level_idx < len(LEVELS) - 1:
+                        elif current_level_idx < len(get_levels_for_char(selected_character)) - 1:
                             current_level_idx += 1
                             screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, last_player_pos = load_level(current_level_idx)
                             refresh_ingame_headers()
@@ -1101,6 +1279,7 @@ def main():
                     elif game_state.state == "CRASH":
                         particles.clear()
                         executor.reset_state()
+                        last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                         last_game_state = "IDLE"
                         continue
 
@@ -1110,12 +1289,14 @@ def main():
                     if action in ["FORWARD", "LEFT", "RIGHT", "REPEAT"]:
                         if game_state.state != "IDLE":
                             executor.reset_state()
+                            last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                             particles.clear()
                             last_game_state = "IDLE"
                         ui.add_command(action)
                     elif action == "UNDO":
                         if game_state.state != "IDLE":
                             executor.reset_state()
+                            last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                             particles.clear()
                             last_game_state = "IDLE"
                         ui.undo_command()
@@ -1127,10 +1308,12 @@ def main():
                         last_game_state = "RUNNING"
                     elif action == "STOP":
                         executor.stop()
+                        last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                         last_game_state = "IDLE"
                     elif action == "CLEAR":
                         ui.clear_commands()
                         executor.reset_state()
+                        last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                         particles.clear()
                         last_game_state = "IDLE"
 
@@ -1141,36 +1324,42 @@ def main():
                             if event.key in (pygame.K_w, pygame.K_UP):
                                 if game_state.state != "IDLE":
                                     executor.reset_state()
+                                    last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.add_command("FORWARD")
                             elif event.key in (pygame.K_a, pygame.K_LEFT):
                                 if game_state.state != "IDLE":
                                     executor.reset_state()
+                                    last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.add_command("LEFT")
                             elif event.key in (pygame.K_d, pygame.K_RIGHT):
                                 if game_state.state != "IDLE":
                                     executor.reset_state()
+                                    last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.add_command("RIGHT")
                             elif event.key == pygame.K_r:
                                 if game_state.state != "IDLE":
                                     executor.reset_state()
+                                    last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.add_command("REPEAT")
                             elif event.key == pygame.K_BACKSPACE:
                                 if game_state.state != "IDLE":
                                     executor.reset_state()
+                                    last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.undo_command()
                             elif event.key == pygame.K_c:
                                 ui.clear_commands()
                                 executor.reset_state()
+                                last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                 particles.clear()
                                 last_game_state = "IDLE"
                             elif event.key == pygame.K_s:
@@ -1182,6 +1371,7 @@ def main():
                         else:
                             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                                 executor.stop()
+                                last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                 last_game_state = "IDLE"
                             elif event.key == pygame.K_s:
                                 executor.step_once()
@@ -1214,7 +1404,7 @@ def main():
                                     refresh_ingame_headers()
                                 else:
                                     state = "MENU"
-                        elif current_level_idx < len(LEVELS) - 1:
+                        elif current_level_idx < len(get_levels_for_char(selected_character)) - 1:
                             current_level_idx += 1
                             screen, level, game_state, ui, executor, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, last_player_pos = load_level(current_level_idx)
                             refresh_ingame_headers()
@@ -1226,8 +1416,9 @@ def main():
                     elif event.key == pygame.K_SPACE and game_state.state == "CRASH":
                         particles.clear()
                         executor.reset_state()
+                        last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                         last_game_state = "IDLE"
-                    elif event.key == pygame.K_ESCAPE:
+                    elif event.key in (pygame.K_ESCAPE, getattr(pygame, "K_AC_BACK", -999)):
                         particles.clear()
                         state = "EDITOR" if (playing_custom and custom_from_editor) else "MENU"
                         last_game_state = "IDLE"
@@ -1238,13 +1429,17 @@ def main():
 
             # Update executor
             executor.update()
+            is_aquatic = (selected_character == "otter" or getattr(level, "habitat", "land") == "water")
 
-            # Dust particles when player moves to a new tile
+            # Dust or water ripple particles when player moves to a new tile
             gx, gy = game_state.giraffe.grid_x, game_state.giraffe.grid_y
             if last_player_pos is not None and (gx, gy) != last_player_pos:
                 px = offset_x + gx * tile_size + tile_size // 2
                 py = offset_y + gy * tile_size + tile_size // 2
-                particles.add_dust_puff(px, py, game_state.giraffe.direction)
+                if is_aquatic:
+                    particles.add_water_ripple(px, py, game_state.giraffe.direction)
+                else:
+                    particles.add_dust_puff(px, py, game_state.giraffe.direction)
                 last_player_pos = (gx, gy)
 
             # State change triggers: sound & celebration / crash particles
@@ -1255,6 +1450,8 @@ def main():
                     t_py = offset_y + level.goal_y * tile_size + tile_size // 2
                     if selected_character == "giraffe":
                         particles.add_leaf_burst(t_px, t_py, 28)
+                    elif selected_character == "otter":
+                        particles.add_otter_catch(t_px, t_py, 28)
                     else:
                         particles.add_cheetah_catch(t_px, t_py, 28)
                     particles.add_win_confetti(LOGICAL_WIDTH, LOGICAL_HEIGHT, 50)
@@ -1275,7 +1472,7 @@ def main():
             # Save progress when player successfully reaches the goal in campaign
             if game_state.state == "SUCCESS" and not playing_custom and current_level_idx not in completed_levels:
                 completed_levels.add(current_level_idx)
-                save_progress(completed_levels)
+                save_progress(completed_levels, selected_character)
 
             # Draw background
             screen.fill((135, 206, 235))
@@ -1316,7 +1513,7 @@ def main():
             screen.blit(title_surf, (MARGIN, 45))
 
             # Grid with target sprite
-            draw_grid(screen, level, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, target_sprite=char_info["target_sprite"])
+            draw_grid(screen, level, offset_x, offset_y, tile_size, level_assets, obstacle_types, ground_types, target_sprite=char_info["target_sprite"], is_aquatic=is_aquatic)
             # Player sprite
             walk_key = char_info["character_sprite"] + "_walk"
             player_sprites = level_assets.get(walk_key) or level_assets.get(char_info["character_sprite"])
@@ -1343,7 +1540,7 @@ def main():
                     else:
                         prompt = t("press_space_menu")
                 else:
-                    prompt = t("press_space_next") if current_level_idx < len(LEVELS) - 1 else t("press_space_menu")
+                    prompt = t("press_space_next") if current_level_idx < len(get_levels_for_char(selected_character)) - 1 else t("press_space_menu")
                 
                 win_text = char_info['win_text']
                 surf1 = font.render(win_text, True, (255, 255, 255))
@@ -1374,7 +1571,8 @@ def main():
             # Crash Overlay
             elif game_state.state == "CRASH":
                 screen.blit(crash_overlay, (0, 0))
-                crash_msg = t("crash_text").format(name=char_info['name'])
+                crash_key = "crash_text_otter" if is_aquatic else "crash_text"
+                crash_msg = t(crash_key).format(name=char_info['name'])
                 surf1 = font.render(crash_msg, True, (255, 255, 255))
                 surf2 = font_sub_prompt.render(t("press_space_retry"), True, (255, 230, 230))
                 card_w = max(surf1.get_width(), surf2.get_width()) + 48

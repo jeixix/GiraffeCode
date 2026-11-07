@@ -74,8 +74,12 @@ class Executor:
             self._do_step()
             self.last_step_time = pygame.time.get_ticks()
 
-        # If reaching the end without crash or success
-        if self.command_index >= len(self.ui.commands) and self.game_state.state == "RUNNING":
+        if self.game_state.state in ("SUCCESS", "CRASH"):
+            self.is_running = False
+            self.ui.set_running(False)
+            if self.game_state.state == "SUCCESS":
+                self.command_index = -1
+        elif self.command_index >= len(self.ui.commands) and self.game_state.state == "RUNNING":
             self.game_state.state = "IDLE"
             self.command_index = -1
             self.ui.set_running(False)
@@ -123,7 +127,7 @@ class Executor:
                 if self.command_index < len(self.ui.commands) and self.game_state.state == "RUNNING":
                     self._do_step()
                     self.last_step_time = current_time
-                else:
+                if self.game_state.state != "RUNNING" or self.command_index >= len(self.ui.commands):
                     self.is_running = False
                     self.ui.set_running(False)
                     if self.game_state.state != "CRASH":

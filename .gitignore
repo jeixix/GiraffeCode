@@ -12,6 +12,7 @@ dist/
 installer_output/
 *.spec
 !GiraffeCode.spec
+!buildozer.spec
 
 # Android Buildozer
 .buildozer/

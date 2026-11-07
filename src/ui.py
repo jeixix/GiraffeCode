@@ -8,8 +8,12 @@ from src.i18n import t
 
 def load_icon(name, size):
     try:
-        base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        path = os.path.join(base, "assets", name)
+        android_app = os.environ.get("ANDROID_APP_PATH") or os.environ.get("ANDROID_ARGUMENT")
+        if android_app and os.path.exists(os.path.join(android_app, "assets", name)):
+            path = os.path.join(android_app, "assets", name)
+        else:
+            base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            path = os.path.join(base, "assets", name)
         if os.path.exists(path):
             img = pygame.image.load(path).convert_alpha()
             return pygame.transform.scale(img, size)

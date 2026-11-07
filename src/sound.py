@@ -7,6 +7,11 @@ import sys
 import pygame
 
 def get_resource_path(relative_path):
+    android_app = os.environ.get("ANDROID_APP_PATH") or os.environ.get("ANDROID_ARGUMENT")
+    if android_app:
+        candidate = os.path.join(android_app, relative_path)
+        if os.path.exists(candidate):
+            return candidate
     try:
         base_path = sys._MEIPASS
     except Exception:

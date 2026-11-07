@@ -17,9 +17,14 @@ from src.i18n import t, get_lang, toggle_lang
 def get_base_data_dir():
     r"""
     Returns directory where user data/saves should persist.
+    - If Android: saves in ANDROID_PRIVATE app data directory.
     - If portable/dev: saves in project or executable directory if writable.
     - If installed in read-only location (e.g. C:\Program Files): saves in %APPDATA%\SavannaCode.
     """
+    android_data = os.environ.get("ANDROID_PRIVATE") or os.environ.get("ANDROID_ARGUMENT")
+    if android_data and os.path.exists(android_data):
+        return android_data
+
     if getattr(sys, "frozen", False):
         exe_dir = os.path.dirname(sys.executable)
         test_file = os.path.join(exe_dir, ".perm_test")
@@ -39,6 +44,11 @@ def get_base_data_dir():
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def get_resource_path(relative_path):
+    android_app = os.environ.get("ANDROID_APP_PATH") or os.environ.get("ANDROID_ARGUMENT")
+    if android_app:
+        candidate = os.path.join(android_app, relative_path)
+        if os.path.exists(candidate):
+            return candidate
     try:
         base_path = sys._MEIPASS
     except Exception:
@@ -137,10 +147,12 @@ def custom_dict_to_level(data):
         start_dir=data.get("start_dir", 1),
         goal_x=data.get("goal_x", 6),
         goal_y=data.get("goal_y", 6),
-        obstacles=obstacles
+        obstacles=obstacles,
+        habitat=data.get("habitat", "land")
     )
     lvl.name_giraffe = lvl.name
     lvl.name_cheetah = lvl.name
+    lvl.name_otter = lvl.name
     lvl.is_custom = True
     lvl.obstacle_types = data.get("obstacle_types", {})
     return lvl
@@ -187,8 +199,14 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
 
     # Current level state
     def get_default_level_state(idx=0):
+        existing_names = {lvl.get("name") for lvl in saved_levels if isinstance(lvl, dict)}
+        num = idx + 1
+        while f"My Level {num}" in existing_names:
+            num += 1
+        default_hab = "water" if selected_char == "otter" else "land"
+        alt_obs = "land" if default_hab == "water" else "water"
         return {
-            "name": f"My Level {idx + 1}",
+            "name": f"My Level {num}",
             "width": 7,
             "height": 7,
             "start_x": 0,
@@ -196,10 +214,11 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
             "start_dir": 1,  # 0: Up, 1: Right, 2: Down, 3: Left
             "goal_x": 6,
             "goal_y": 3,
+            "habitat": default_hab,
             "obstacles": [(2, 2), (2, 3), (2, 4), (4, 1), (4, 2), (4, 3)],
             "obstacle_types": {
                 "2,2": "rock", "2,3": "rock", "2,4": "rock",
-                "4,1": "water", "4,2": "water", "4,3": "water"
+                "4,1": alt_obs, "4,2": alt_obs, "4,3": alt_obs
             }
         }
 
@@ -232,12 +251,17 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
     btn_lang = Button(screen.get_width() - 245, 15, 65, 40, get_lang(),
                       (190, 225, 255), (220, 240, 255), "TOGGLE_LANG", font_size=20)
 
+    def is_state_aquatic():
+        return selected_char == "otter" or state.get("habitat") == "water"
+
     # Tool selection buttons
     tool_buttons = [
         Button(20, 140, 150, 46, t("ed_hero_start"), (255, 235, 140), (255, 245, 180), "TOOL_START", font_size=20),
         Button(20, 195, 150, 46, t("ed_goal_target"), (140, 240, 140), (180, 255, 180), "TOOL_GOAL", font_size=20),
         Button(20, 250, 150, 46, t("ed_rock"), (210, 210, 210), (230, 230, 230), "TOOL_ROCK", font_size=20),
-        Button(20, 305, 150, 46, t("ed_water"), (160, 210, 255), (190, 230, 255), "TOOL_WATER", font_size=20),
+        Button(20, 305, 150, 46, t("ed_land") if is_state_aquatic() else t("ed_water"),
+               (160, 225, 150) if is_state_aquatic() else (160, 210, 255),
+               (190, 245, 180) if is_state_aquatic() else (190, 230, 255), "TOOL_WATER", font_size=20),
         Button(20, 360, 150, 46, t("ed_eraser"), (255, 190, 190), (255, 215, 215), "TOOL_ERASE", font_size=20),
     ]
 
@@ -277,7 +301,9 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
         tool_buttons[0].text = t("ed_hero_start")
         tool_buttons[1].text = t("ed_goal_target")
         tool_buttons[2].text = t("ed_rock")
-        tool_buttons[3].text = t("ed_water")
+        tool_buttons[3].text = t("ed_land") if is_state_aquatic() else t("ed_water")
+        tool_buttons[3].color = (160, 225, 150) if is_state_aquatic() else (160, 210, 255)
+        tool_buttons[3].hover_color = (190, 245, 180) if is_state_aquatic() else (190, 230, 255)
         tool_buttons[4].text = t("ed_eraser")
         btn_new.text = t("ed_new_level")
         btn_clear.text = t("ed_clear_grid")
@@ -287,8 +313,15 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
 
     mouse_down = False
     last_drag_cell = None
-    hero_char_key = "giraffe" if selected_char == "giraffe" else "cheetah"
-    target_char_key = "tree" if selected_char == "giraffe" else "gazelle"
+    if selected_char == "otter":
+        hero_char_key = "otter"
+        target_char_key = "fish"
+    elif selected_char == "giraffe":
+        hero_char_key = "giraffe"
+        target_char_key = "tree"
+    else:
+        hero_char_key = "cheetah"
+        target_char_key = "gazelle"
     cached_scaled_tiles = {}
 
     while True:
@@ -351,7 +384,10 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                 if (col, row) in ((state["start_x"], state["start_y"]), (state["goal_x"], state["goal_y"])):
                     return
                 obs_set.add((col, row))
-                obs_map[key] = "rock" if current_tool == "ROCK" else "water"
+                if current_tool == "ROCK":
+                    obs_map[key] = "rock"
+                else:
+                    obs_map[key] = "land" if is_state_aquatic() else "water"
                 sound_manager.play_click()
 
             elif current_tool == "ERASE":
@@ -387,6 +423,12 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                     toggle_lang()
                     refresh_editor_texts()
                     sound_manager.play_click()
+                elif event.key == pygame.K_m:
+                    sound_manager.toggle_mute()
+                    sound_manager.play_click()
+                elif event.key in (pygame.K_ESCAPE, getattr(pygame, "K_AC_BACK", -999)):
+                    sound_manager.play_click()
+                    return "MENU", None
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1: # Left click
@@ -510,18 +552,21 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                     if saved_levels and current_level_idx > 0:
                         current_level_idx -= 1
                         state = clone_level_state(saved_levels[current_level_idx])
+                        refresh_editor_texts()
                         sound_manager.play_click()
                         show_toast(t("ed_loaded_toast").format(name=state['name']))
                 elif act == "NEXT_LEVEL":
                     if saved_levels and current_level_idx < len(saved_levels) - 1:
                         current_level_idx += 1
                         state = clone_level_state(saved_levels[current_level_idx])
+                        refresh_editor_texts()
                         sound_manager.play_click()
                         show_toast(t("ed_loaded_toast").format(name=state['name']))
 
                 elif act == "NEW_LEVEL":
                     current_level_idx = len(saved_levels)
                     state = get_default_level_state(current_level_idx)
+                    refresh_editor_texts()
                     sound_manager.play_click()
                     show_toast(t("ed_created_draft_toast"))
 
@@ -536,6 +581,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         else:
                             current_level_idx = -1
                             state = get_default_level_state(0)
+                        refresh_editor_texts()
                         if ok:
                             show_toast(t("ed_deleted_ok"))
                         else:
@@ -709,29 +755,48 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
 
         hovered_cell = screen_to_cell(mouse_pos)
 
+        is_aquatic = is_state_aquatic()
         for r in range(grid_h_count):
             for c in range(grid_w_count):
                 cell_rect = pygame.Rect(grid_start_x + c * tile_size, grid_start_y + r * tile_size, tile_size, tile_size)
 
-                # 1. Base grass
-                if scaled_tiles["grass"]:
-                    screen.blit(scaled_tiles["grass"], cell_rect)
+                # 1. Base walkable terrain (Water for Otter/aquatic, Grass for terrestrial)
+                if is_aquatic:
+                    if scaled_tiles["water"]:
+                        screen.blit(scaled_tiles["water"], cell_rect)
+                    else:
+                        pygame.draw.rect(screen, (50, 120, 230), cell_rect)
                 else:
-                    pygame.draw.rect(screen, (130, 200, 120), cell_rect)
+                    if scaled_tiles["grass"]:
+                        screen.blit(scaled_tiles["grass"], cell_rect)
+                    else:
+                        pygame.draw.rect(screen, (130, 200, 120), cell_rect)
 
-                # 2. Obstacle (Rock or Water)
+                # 2. Obstacle (Rock or Water/Land)
                 if (c, r) in obs_set:
                     t_type = obs_map.get(f"{c},{r}", "rock")
-                    if t_type == "water":
-                        if scaled_tiles["water"]:
-                            screen.blit(scaled_tiles["water"], cell_rect)
+                    if is_aquatic:
+                        if t_type in ("land", "water"):
+                            if scaled_tiles["grass"]:
+                                screen.blit(scaled_tiles["grass"], cell_rect)
+                            else:
+                                pygame.draw.rect(screen, (130, 200, 120), cell_rect)
                         else:
-                            pygame.draw.rect(screen, (50, 120, 230), cell_rect)
+                            if scaled_tiles["rock"]:
+                                screen.blit(scaled_tiles["rock"], cell_rect)
+                            else:
+                                pygame.draw.rect(screen, (120, 120, 120), cell_rect)
                     else:
-                        if scaled_tiles["rock"]:
-                            screen.blit(scaled_tiles["rock"], cell_rect)
+                        if t_type == "water":
+                            if scaled_tiles["water"]:
+                                screen.blit(scaled_tiles["water"], cell_rect)
+                            else:
+                                pygame.draw.rect(screen, (50, 120, 230), cell_rect)
                         else:
-                            pygame.draw.rect(screen, (120, 120, 120), cell_rect)
+                            if scaled_tiles["rock"]:
+                                screen.blit(scaled_tiles["rock"], cell_rect)
+                            else:
+                                pygame.draw.rect(screen, (120, 120, 120), cell_rect)
 
                 # 3. Start Tile (Hero)
                 if (c, r) == (state["start_x"], state["start_y"]):
@@ -772,7 +837,8 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                         screen.blit(scaled_tiles["target"], (cell_rect.x + 4, cell_rect.y + 4))
 
                 # Grid border
-                pygame.draw.rect(screen, (160, 200, 160), cell_rect, 1)
+                border_col = (70, 150, 210) if is_aquatic else (160, 200, 160)
+                pygame.draw.rect(screen, border_col, cell_rect, 1)
 
                 # Cell hover highlight
                 if hovered_cell == (c, r):
