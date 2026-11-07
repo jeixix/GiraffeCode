@@ -244,12 +244,17 @@ def load_or_generate_otter_assets(assets_dir, load_image_fn):
     attempts to persist to assets_dir, and converts to pygame.Surface.
     """
     result = {}
-    otter_s = load_image_fn("otter.png")
-    otter_w1 = load_image_fn("otter_walk1.png")
-    otter_w2 = load_image_fn("otter_walk2.png")
-    fish_s = load_image_fn("fish.png")
-    e_otter = load_image_fn("emoji_otter.png")
-    e_fish = load_image_fn("emoji_fish.png")
+    def _try_load(fname):
+        if os.path.exists(os.path.join(assets_dir, fname)):
+            return load_image_fn(fname)
+        return None
+
+    otter_s = _try_load("otter.png")
+    otter_w1 = _try_load("otter_walk1.png")
+    otter_w2 = _try_load("otter_walk2.png")
+    fish_s = _try_load("fish.png")
+    e_otter = _try_load("emoji_otter.png")
+    e_fish = _try_load("emoji_fish.png")
 
     if otter_s and otter_w1 and otter_w2 and fish_s and e_otter and e_fish:
         result["otter"] = otter_s

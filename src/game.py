@@ -1074,7 +1074,7 @@ def main():
             pygame.display.set_caption(f"SavannaCode - {c_info['name']} - {lvl_title}")
 
     def load_level(idx_or_level):
-        nonlocal current_level_idx, playing_custom, custom_level_obj, level, current_custom_idx, custom_from_editor, custom_total_count
+        nonlocal current_level_idx, playing_custom, custom_level_obj, level, current_custom_idx, custom_from_editor, custom_total_count, executor
         if isinstance(idx_or_level, Level):
             level = idx_or_level
             custom_level_obj = level

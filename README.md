@@ -1,38 +1,40 @@
-# 🦒 GiraffeCode / SavannaCode 🐆
+# 🦒 GiraffeCode / SavannaCode 🐆 🦦
+
+> 🌐 **Language / Idioma:** **English (`README.md`)** | [Español (`README_ES.md`)](README_ES.md)
 
 **SavannaCode** (formerly GiraffeCode) is an educational programming game designed to introduce children (ages 5–9) to computational thinking and coding principles through a playful, visual experience.
 
-Players can choose their favorite animal hero—a hungry **Giraffe** or a speedy **Cheetah**—and navigate them across a savanna grid by sequencing directional commands (`FORWARD`, `LEFT`, `RIGHT`) to reach their goal (Acacia Leaves or a Gazelle) while avoiding obstacles like rocks and rivers.
+Players can choose their favorite animal hero—a hungry **Giraffe**, a speedy **Cheetah**, or a playful **Otter**—and navigate them across a grid by sequencing directional commands (`FORWARD`, `LEFT`, `RIGHT`) to reach their goal (**Acacia Leaves**, a **Gazelle**, or a **River Fish**). While the Giraffe and Cheetah traverse savanna land tiles and avoid rocks and water, the aquatic **Otter** can only swim through **water channels** and must avoid land banks and river rocks!
 
 ---
 
 ## 🌟 Features
 
-- **Choose Your Hero:** Interactive character selection screen. Play as the Giraffe to reach acacia leaves, or play as the Cheetah to catch the gazelle!
+- **Choose Your Hero (3 Playable Animals):** Interactive character selection screen. Play as the **Giraffe** to reach acacia leaves, the **Cheetah** to catch the gazelle on land, or the **Otter** to swim through river channels and catch the fish!
 - **Step-by-Step Debugger (`STEP ⏭️`):** Essential educational tool allowing young coders to execute their code one command at a time, seeing their hero move while the corresponding code pill glows golden.
 - **Adjustable Execution Speed (🐢 Normal / ⚡ Turbo):** Toggle between gentle 600ms step pacing for beginners and rapid 250ms turbo speed for testing long solutions.
-- **10-Chapter Paginated Level Selector (🗺️):** All 200 levels are cleanly organized across 10 themed savanna biomes (20 levels per chapter in an intuitive 5x4 grid) with quick-jump world pills and arrow navigation.
-- **Bilingual English 🇬🇧 / Spanish 🇪🇸 Localization:** One-click language switching (`L` or top-right button) instantly translates all commands, code pills, tutorials, dialogue overlays, and all 200 level titles dynamically across both Giraffe and Cheetah heroes!
+- **10-Chapter Paginated Level Selector (🗺️):** Each campaign features 200 levels cleanly organized across 10 themed chapters (20 levels per chapter in an intuitive 5x4 grid)—10 savanna biomes for Giraffe/Cheetah and 10 river & lagoon worlds for the Otter—with quick-jump world pills and arrow navigation.
+- **Bilingual English 🇬🇧 / Spanish 🇪🇸 Localization:** One-click language switching (`L` or top-right button) instantly translates all commands, code pills, tutorials, dialogue overlays, and all level titles dynamically across Giraffe, Cheetah, and Otter heroes!
 - **Global Sound Mute Toggle (🔊 / 🔇):** Easily mute all sound effects with a single click or keyboard shortcut (`M`), perfect for classroom and quiet settings.
-- **Visual "Juice" & Particle Effects (✨):** Cheerful, lightweight particle bursts: fluttering leaves when the giraffe reaches the acacia tree, sparkle stars when the cheetah catches the gazelle, running dust clouds under animal paws, water splashes, and victory confetti.
-- **Built-in Level Editor (🛠️):** Design and save custom savanna puzzles! Adjust grid dimensions, place obstacles, water, start, and goals. Features a mandatory BFS mathematical solvability checker that ensures custom levels are 100% solvable before allowing players to test and play them!
+- **Visual "Juice" & Particle Effects (✨):** Cheerful, lightweight particle bursts: fluttering leaves when the giraffe reaches the acacia tree, sparkle stars when the cheetah catches the gazelle, aqua bubbles & golden splashes when the otter catches the fish, running dust clouds or swimming water ripples, and victory confetti.
+- **Built-in Level Editor (🛠️):** Design and save custom savanna or aquatic river puzzles! Automatically adapts its terrain palette to your selected hero (grass floor with rock/water obstacles for Giraffe & Cheetah, or water channels with rock/land-bank obstacles for the Otter) and features a mandatory BFS mathematical solvability checker before testing!
 - **Playful Audio Engine (🎵):** Immersive sound effects for movement steps, turn chirps, UI button pops, crash thuds, and joyful victory jingles with graceful device fallback.
-- **High-Quality Emoji Graphics:** The game uses bundled high-resolution Twemoji graphics for characters, targets, and UI icons, guaranteeing consistent, vibrant visuals across all operating systems without relying on missing system fonts.
+- **High-Quality Emoji & Sprite Graphics:** Uses bundled high-resolution graphics for all characters, targets, and UI icons, guaranteeing consistent, vibrant visuals across all operating systems without relying on missing system fonts.
 - **Educational "Loops" (`REPEAT`):** Teaches computational thinking and loop constructs, allowing players to repeat sequences cleanly.
-- **200 Solvable Levels:** 200 thoughtfully designed and procedurally generated levels ranging from gentle straight lines to complex maze puzzles. All 200 levels are mathematically verified to be 100% solvable, with dynamic bilingual titles in English and Spanish for both animal heroes!
+- **400 Solvable Campaign Levels (200 Land + 200 Water):** 200 savanna levels for the Giraffe & Cheetah plus 200 dedicated aquatic river/channel levels for the Otter. All 400 levels are mathematically verified via BFS to be 100% solvable, with independent progress tracking per habitat!
 - **Real-Time Code Execution Highlighter:** Just like Scratch and Blockly, the command queue is rendered as visual code pills that glow golden in real time as the animal executes each step!
 - **Undo (⌫) & Emergency Stop (⏹):** Made a typo? Click **UNDO** or press `Backspace` to delete just the last command without wiping your whole queue. If you see a crash coming, click **STOP** to halt execution instantly.
-- **Progress Tracking & Stars (⭐):** Your completed levels are saved automatically! Completed levels earn a gold star in the level select menu, tracking your journey to 200/200 stars.
-- **Natural Biome Terrain:** Coherent savanna environment with lush grass, sun-baked dry savanna patches, natural clustered watering holes, and muddy riverbanks.
+- **Progress Tracking & Stars (⭐):** Your completed levels are saved automatically (separately for terrestrial and aquatic campaigns)! Completed levels earn a gold star in the level select menu, tracking your journey to 200/200 stars.
+- **Natural Savanna & River Biomes:** Coherent savanna environment with lush grass, sun-baked dry patches, and watering holes for land heroes, plus flowing water channels, grassy riverbanks, and river boulders for the Otter.
 - **Dynamic Resolution & Display Modes:** Built for both Fullscreen and Windowed mode (`F11`), with dynamic grid scaling ensuring the entire grid and all bottom tiles are 100% visible on all monitor sizes. Fully crash-proof display toggling!
-- **Animated Walk Cycles:** Procedural running and walking simulations with dynamic leg shearing, wobbling, and vertical bobbing.
+- **Animated Walk & Swim Cycles:** Procedural running, walking, and swimming animations with dynamic shearing, wobbling, and vertical bobbing.
 
 ---
 
 ## 🎮 How to Play & Controls
 
 ### Objective
-Plan a sequence of instructions to guide your animal to the goal tile without crashing into rocks, water hazards, or stepping out of bounds!
+Plan a sequence of instructions to guide your animal to the goal tile without crashing into obstacles (rocks and water for Giraffe/Cheetah; land banks and river rocks for the Otter) or stepping out of bounds!
 
 ### 🖱️ Mouse Controls
 - **FORWARD:** Moves your hero 1 tile forward in the direction they are facing.
@@ -224,13 +226,14 @@ GiraffeCode/
 │   ├── game.py         # Main loop, menus, dynamic scaling & terrain generation
 │   ├── executor.py     # Command execution engine, step debugger & speed controls
 │   ├── game_state.py   # Grid state, directional movement & collision detection
-│   ├── giraffe.py      # Player entity, smooth sub-pixel interpolation & walk animations
-│   ├── levels.py       # 200 verified solvable levels with dynamic bilingual (EN/ES) names
-│   ├── editor.py       # Level editor with BFS mathematical solvability verification
+│   ├── giraffe.py      # Player entity, smooth sub-pixel interpolation & walk/swim animations
+│   ├── levels.py       # 200 savanna levels + 200 aquatic Otter levels with bilingual (EN/ES) names
+│   ├── otter_assets.py # High-resolution sprite & icon generator/loader for Otter & Fish
+│   ├── editor.py       # Level editor with land/aquatic support & BFS solvability verification
 │   ├── sound.py        # Audio manager, mute toggle & procedural SFX playback engine
 │   ├── ui.py           # Buttons, visual code pills, highlighter & UI rendering
 │   ├── i18n.py         # Bilingual localization engine (English 🇬🇧 / Spanish 🇪🇸)
-│   ├── particles.py    # Visual particle engine (leaf munch, sparkles, dust, confetti)
+│   ├── particles.py    # Visual particle engine (leaf munch, sparkles, water ripples, confetti)
 │   └── scripts/        # Asset generation & walk cycle utility scripts
 ├── .github/
 │   └── workflows/      # Automated GitHub Actions cloud CI/CD workflows
