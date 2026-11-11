@@ -1585,7 +1585,7 @@ OTTER_WORDS_ES = [
 
 OTTER_LEVELS = [
     Level(name='Level 1: Straight Down the Stream!', width=5, height=5, start_x=0, start_y=2, start_dir=1, goal_x=4, goal_y=2, obstacles=[(0, 0), (0, 1), (0, 3), (0, 4), (1, 0), (1, 1), (1, 3), (1, 4), (2, 0), (2, 1), (2, 3), (2, 4), (3, 0), (3, 1), (3, 3), (3, 4), (4, 0), (4, 1), (4, 3), (4, 4)], habitat='water'),
-    Level(name='Level 2: River Bend!', width=5, height=5, start_x=1, start_y=1, start_dir=1, goal_x=3, goal_y=4, obstacles=[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (0, 1), (4, 1), (0, 2), (1, 2), (4, 2), (0, 3), (1, 3), (4, 3), (0, 4), (1, 4), (2, 4), (4, 4)], habitat='water'),
+    Level(name='Level 2: River Bend!', width=5, height=5, start_x=1, start_y=1, start_dir=1, goal_x=3, goal_y=4, obstacles=[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (0, 1), (2, 1), (3, 1), (4, 1), (0, 2), (2, 2), (3, 2), (4, 2), (0, 3), (2, 3), (3, 3), (4, 3), (0, 4), (4, 4)], habitat='water'),
     Level(name='Level 3: Rapid Current', width=6, height=6, start_x=1, start_y=4, start_dir=1, goal_x=4, goal_y=1, obstacles=[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (0, 1), (5, 1), (0, 2), (5, 2), (0, 3), (1, 3), (2, 3), (3, 3), (5, 3), (0, 4), (5, 4), (0, 5), (1, 5), (2, 5), (3, 5), (4, 5), (5, 5)], habitat='water'),
     Level(name='Level 4: Otter Splash', width=4, height=4, start_x=3, start_y=2, start_dir=2, goal_x=1, goal_y=2, obstacles=[(0, 0), (1, 0), (2, 0), (3, 0), (2, 1), (3, 1), (3, 3)], habitat='water'),
     Level(name='Level 5: Pebble Creek', width=4, height=4, start_x=0, start_y=2, start_dir=1, goal_x=1, goal_y=0, obstacles=[(2, 0), (3, 0), (3, 1), (0, 3), (1, 3), (3, 3)], habitat='water'),

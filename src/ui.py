@@ -333,20 +333,26 @@ class UI:
             # Add a white outline for readability
             outline = self.tut_font.render(text_str, True, (255, 255, 255))
             rect = text.get_rect(midbottom=(target_rect.centerx, target_rect.top - 15 + bounce))
+            # Clamp text rect horizontally so it never clips off the screen edges
+            if rect.left < 12:
+                rect.left = 12
+            if rect.right > self.width - 12:
+                rect.right = self.width - 12
+            arrow_x = max(rect.left + 14, min(rect.right - 14, target_rect.centerx))
             
             for dx, dy in [(-1,-1), (1,-1), (-1,1), (1,1), (0,-2), (0,2), (-2,0), (2,0)]:
                 surface.blit(outline, (rect.x + dx, rect.y + dy))
             surface.blit(text, rect)
             
             pygame.draw.polygon(surface, tut_color, [
-                (rect.centerx - 8, rect.bottom + 4),
-                (rect.centerx + 8, rect.bottom + 4),
-                (rect.centerx, rect.bottom + 12)
+                (arrow_x - 8, rect.bottom + 4),
+                (arrow_x + 8, rect.bottom + 4),
+                (arrow_x, rect.bottom + 12)
             ])
             pygame.draw.polygon(surface, (255, 255, 255), [
-                (rect.centerx - 10, rect.bottom + 2),
-                (rect.centerx + 10, rect.bottom + 2),
-                (rect.centerx, rect.bottom + 14)
+                (arrow_x - 10, rect.bottom + 2),
+                (arrow_x + 10, rect.bottom + 2),
+                (arrow_x, rect.bottom + 14)
             ], 2)
             
         if tutorial_level == 0:

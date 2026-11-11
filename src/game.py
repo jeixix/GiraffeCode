@@ -1125,16 +1125,24 @@ def main():
         offset_x = (LOGICAL_WIDTH - grid_w) // 2
         offset_y = board_top + (avail_h - grid_h) // 2
 
-        is_aquatic = (selected_character == "otter" or getattr(level, "habitat", "land") == "water")
+        is_aquatic = (selected_character == "otter")
         if playing_custom:
             obstacle_types = {}
             if getattr(level, 'obstacle_types', None):
                 for k, v in level.obstacle_types.items():
                     if isinstance(k, str) and "," in k:
                         parts = k.split(",")
-                        obstacle_types[(int(parts[0]), int(parts[1]))] = v
+                        pos_k = (int(parts[0]), int(parts[1]))
                     elif isinstance(k, tuple):
-                        obstacle_types[k] = v
+                        pos_k = k
+                    else:
+                        continue
+                    if is_aquatic and v == "water":
+                        obstacle_types[pos_k] = "land"
+                    elif not is_aquatic and v == "land":
+                        obstacle_types[pos_k] = "water"
+                    else:
+                        obstacle_types[pos_k] = v
             default_obs = "land" if is_aquatic else "rock"
             for o in level.obstacles:
                 if tuple(o) not in obstacle_types:
@@ -1285,16 +1293,25 @@ def main():
 
                 # UI bottom bar button actions (disabled while victory/crash modal is active)
                 if game_state.state not in ("SUCCESS", "CRASH"):
+                    def _needs_edit_reset():
+                        g = game_state.giraffe
+                        return (
+                            game_state.state != "IDLE"
+                            or g.grid_x != level.start_x
+                            or g.grid_y != level.start_y
+                            or g.direction != level.start_dir
+                        )
+
                     action = ui.handle_event(event)
                     if action in ["FORWARD", "LEFT", "RIGHT", "REPEAT"]:
-                        if game_state.state != "IDLE":
+                        if _needs_edit_reset():
                             executor.reset_state()
                             last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                             particles.clear()
                             last_game_state = "IDLE"
                         ui.add_command(action)
                     elif action == "UNDO":
-                        if game_state.state != "IDLE":
+                        if _needs_edit_reset():
                             executor.reset_state()
                             last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                             particles.clear()
@@ -1321,36 +1338,43 @@ def main():
                 if event.type == pygame.KEYDOWN:
                     if game_state.state not in ("SUCCESS", "CRASH"):
                         if not executor.is_running:
+                            g = game_state.giraffe
+                            needs_kb_reset = (
+                                game_state.state != "IDLE"
+                                or g.grid_x != level.start_x
+                                or g.grid_y != level.start_y
+                                or g.direction != level.start_dir
+                            )
                             if event.key in (pygame.K_w, pygame.K_UP):
-                                if game_state.state != "IDLE":
+                                if needs_kb_reset:
                                     executor.reset_state()
                                     last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.add_command("FORWARD")
                             elif event.key in (pygame.K_a, pygame.K_LEFT):
-                                if game_state.state != "IDLE":
+                                if needs_kb_reset:
                                     executor.reset_state()
                                     last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.add_command("LEFT")
                             elif event.key in (pygame.K_d, pygame.K_RIGHT):
-                                if game_state.state != "IDLE":
+                                if needs_kb_reset:
                                     executor.reset_state()
                                     last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.add_command("RIGHT")
                             elif event.key == pygame.K_r:
-                                if game_state.state != "IDLE":
+                                if needs_kb_reset:
                                     executor.reset_state()
                                     last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
                                     last_game_state = "IDLE"
                                 ui.add_command("REPEAT")
                             elif event.key == pygame.K_BACKSPACE:
-                                if game_state.state != "IDLE":
+                                if needs_kb_reset:
                                     executor.reset_state()
                                     last_player_pos = (game_state.giraffe.grid_x, game_state.giraffe.grid_y)
                                     particles.clear()
@@ -1429,7 +1453,7 @@ def main():
 
             # Update executor
             executor.update()
-            is_aquatic = (selected_character == "otter" or getattr(level, "habitat", "land") == "water")
+            is_aquatic = (selected_character == "otter")
 
             # Dust or water ripple particles when player moves to a new tile
             gx, gy = game_state.giraffe.grid_x, game_state.giraffe.grid_y

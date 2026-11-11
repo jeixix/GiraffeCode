@@ -252,7 +252,7 @@ def level_editor_screen(screen, assets, selected_char, get_screen_fn, is_fullscr
                       (190, 225, 255), (220, 240, 255), "TOGGLE_LANG", font_size=20)
 
     def is_state_aquatic():
-        return selected_char == "otter" or state.get("habitat") == "water"
+        return selected_char == "otter"
 
     # Tool selection buttons
     tool_buttons = [
